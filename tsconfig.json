@@ -1,0 +1,17 @@
+{
+  "compileOnSave": false,
+  "exclude": ["node_modules", "dist"],
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "target": "es2016",
+    "outDir": "dist",
+    "strict": true,
+    "noImplicitAny": true,
+    "importHelpers": true,
+    "noEmitHelpers": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "lib": ["es2015", "es2016"]
+  }
+}

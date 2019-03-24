@@ -1,0 +1,12 @@
+version: '2.1'
+networks:
+  stream-store:
+    name: stream-store
+services:
+  postgres:
+    image: postgres:9.6
+    networks:
+      - stream-store
+    ports:
+      - '20091:5432'
+  
