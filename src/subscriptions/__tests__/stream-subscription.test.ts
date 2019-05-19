@@ -54,7 +54,9 @@ beforeEach(() => {
       nextVersion: 5,
       streamPosition: '10',
       streamType: 'test',
-      streamVersion: 9
+      streamVersion: 9,
+      maxAge: null,
+      maxCount: null
     } as ReadStreamResult)
     .mockReturnValueOnce({
       streamId,
@@ -63,7 +65,9 @@ beforeEach(() => {
       nextVersion: 9,
       streamPosition: '10',
       streamType: 'test',
-      streamVersion: 9
+      streamVersion: 9,
+      maxAge: null,
+      maxCount: null
     } as ReadStreamResult)
     .mockReturnValue({
       streamId,
@@ -72,7 +76,9 @@ beforeEach(() => {
       nextVersion: 9,
       streamPosition: '10',
       streamType: 'test',
-      streamVersion: 9
+      streamVersion: 9,
+      maxAge: null,
+      maxCount: null
     } as ReadStreamResult)
 })
 

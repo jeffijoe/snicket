@@ -1,9 +1,9 @@
-import { PgStreamStoreConfig } from '../types/config'
-import * as schemaV1 from './schema-v1'
-import * as queryUtil from '../utils/query-util'
-import { createPostgresPool, runInTransaction } from '../connection'
 import format from 'pg-format'
 import { noopLogger } from '../../logging/noop'
+import { PgStreamStoreConfig } from '../types/config'
+import { createPostgresPool, runInTransaction } from '../connection'
+import * as queryUtil from '../utils/query-util'
+import * as schemaV1 from './schema-v1'
 
 /**
  * Bootstrapper for the Postgres Stream Store.

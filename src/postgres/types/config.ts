@@ -69,4 +69,12 @@ export interface DatabaseConnectionOptions {
   password: string
   database: string
   ssl?: boolean
+  /**
+   * Pool minimum size.
+   */
+  min?: number
+  /**
+   * Pool maximum size.
+   */
+  max?: number
 }

@@ -5,6 +5,14 @@ import BigInteger from 'big-integer'
 import { DisposedError } from '../errors/errors'
 import { delay } from '../utils/promise-util'
 
+/**
+ * A Polling Notifier will poll the head for changes and signal whenever there's
+ * changes to pull.
+ *
+ * @param interval the interval to check for new messages
+ * @param readHeadPosition a function to read the head position
+ * @param logger used for logging trace-level stuff as well as errors
+ */
 export function createPollingNotifier(
   interval: number,
   readHeadPosition: StreamStore['readHeadPosition'],

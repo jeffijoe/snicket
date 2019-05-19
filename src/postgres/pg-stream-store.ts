@@ -32,7 +32,8 @@ import {
   StreamVersion,
   StreamMessage,
   MessagePosition,
-  Position
+  Position,
+  STREAM_METADATA_TYPE
 } from '../types/messages'
 import { PgStreamStoreConfig } from './types/config'
 import { createPostgresPool, runInTransaction } from './connection'
@@ -76,13 +77,13 @@ export function createPostgresStreamStore(
   const scripts = createScripts(config.pg.schema)
 
   // Keep track of subscriptions so we can dispose them when the store is disposed.
-  let _subscriptions: Subscription[] = []
+  let subscriptions: Subscription[] = []
   // Cache the notifier.
-  let _notifier: StreamStoreNotifier = null!
+  let notifier: StreamStoreNotifier = null!
   // These 2 are used to ensure that we wait for writes to finish when
   // disposing, and ensure that writes don't happen while disposing.
-  let _disposing = false
-  const _writeLatch = createDuplexLatch()
+  let disposing = false
+  const writeLatch = createDuplexLatch()
 
   const store: StreamStore = {
     appendToStream,
@@ -125,14 +126,15 @@ export function createPostgresStreamStore(
     // Retried in case of concurrency issues.
     const retryableAppendToStream = async (again: Function) => {
       try {
-        const { current_version, current_position } = await insertMessages(
-          streamId,
-          expectedVersion,
-          newMessages
-        )
+        const {
+          current_version,
+          current_position,
+          max_age,
+          max_count
+        } = await insertMessages(streamId, expectedVersion, newMessages)
 
         throwIfErrorCode(current_version)
-
+        await maybeScavenge(streamId, max_count, max_age)
         return {
           streamPosition: current_position,
           streamVersion: current_version
@@ -154,13 +156,13 @@ export function createPostgresStreamStore(
       }
     }
 
-    if (_disposing) {
+    if (disposing) {
       throw new DisposedError(
         'The stream store has been disposed and is not accepting writes.'
       )
     }
 
-    _writeLatch.enter()
+    writeLatch.enter()
     try {
       return await retry(retryableAppendToStream, {
         factor: 1.05,
@@ -169,7 +171,7 @@ export function createPostgresStreamStore(
         maxTimeout: 50
       })
     } finally {
-      _writeLatch.exit()
+      writeLatch.exit()
     }
   }
 
@@ -227,6 +229,8 @@ export function createPostgresStreamStore(
         streamId: streamId,
         streamPosition: '0',
         streamVersion: 0,
+        maxAge: 0,
+        maxCount: 0,
         isEnd: true,
         messages: []
       }
@@ -349,7 +353,9 @@ export function createPostgresStreamStore(
       return {
         streamId,
         metadata: null,
-        metadataStreamVersion: -1
+        metadataStreamVersion: -1,
+        maxAge: null,
+        maxCount: null
       }
     }
 
@@ -357,7 +363,9 @@ export function createPostgresStreamStore(
     return {
       metadata: message.data.metadata,
       metadataStreamVersion: result.streamVersion,
-      streamId: streamId
+      streamId: streamId,
+      maxAge: message.data.maxAge || null,
+      maxCount: message.data.maxCount || null
     }
   }
 
@@ -373,11 +381,22 @@ export function createPostgresStreamStore(
     const result = await runInTransaction(pool, trx => {
       return trx
         .query(
-          scripts.setStreamMetadata(streamId, metaStreamId, expectedVersion, {
-            messageId: v4(),
-            data: { metadata: opts.metadata },
-            type: '$streamMetadata'
-          })
+          scripts.setStreamMetadata(
+            streamId,
+            metaStreamId,
+            expectedVersion,
+            opts.maxAge || null,
+            opts.maxCount || null,
+            {
+              messageId: v4(),
+              data: {
+                metadata: opts.metadata || {},
+                maxAge: opts.maxAge || null,
+                maxCount: opts.maxCount || null
+              },
+              type: STREAM_METADATA_TYPE
+            }
+          )
         )
         .then(x => x.rows[0])
     })
@@ -410,13 +429,13 @@ export function createPostgresStreamStore(
             resolve(subscription)
           },
           dispose: async () => {
-            _subscriptions.splice(_subscriptions.indexOf(subscription), 1)
+            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             await callSubscriptionOptionsDisposer(subscriptionOptions)
             resolve(subscription)
           }
         }
       )
-      _subscriptions.push(subscription)
+      subscriptions.push(subscription)
     })
   }
 
@@ -442,13 +461,13 @@ export function createPostgresStreamStore(
             resolve(subscription)
           },
           dispose: async () => {
-            _subscriptions.splice(_subscriptions.indexOf(subscription), 1)
+            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             await callSubscriptionOptionsDisposer(subscriptionOptions)
             resolve(subscription)
           }
         }
       )
-      _subscriptions.push(subscription)
+      subscriptions.push(subscription)
     })
   }
 
@@ -456,18 +475,18 @@ export function createPostgresStreamStore(
    * Disposes underlying resources (database connection, subscriptions, notifier).
    */
   async function dispose() {
-    _disposing = true
+    disposing = true
     logger.trace(
       'pg-stream-store: dispose called, disposing all subscriptions..'
     )
-    await Promise.all(_subscriptions.map(s => s.dispose()))
-    if (_notifier) {
-      await _notifier.dispose()
+    await Promise.all(subscriptions.map(s => s.dispose()))
+    if (notifier) {
+      await notifier.dispose()
     }
     logger.trace(
       'pg-stream-store: all subscriptions disposed, waiting for all writes to finish..'
     )
-    await _writeLatch.wait()
+    await writeLatch.wait()
     logger.trace(
       'pg-stream-store: all writes finished, closing database connection..'
     )
@@ -503,19 +522,43 @@ export function createPostgresStreamStore(
   ): Promise<InsertResult> {
     return runInTransaction(pool, trx => {
       return trx
-        .query(scripts.append(streamId, expectedVersion, newMessages))
+        .query(
+          scripts.append(
+            streamId,
+            toMetadataStreamId(streamId),
+            expectedVersion,
+            newMessages
+          )
+        )
         .then(x => x.rows[0])
     })
+  }
+
+  /**
+   * Scavenges the stream if the max age and count say so.
+   * The options passed in to the stream store determine whether it happens sync (after append finishes but before returning)
+   * or async (in the background).
+   *
+   * @param streamId
+   * @param maxAge
+   * @param maxCount
+   */
+  async function maybeScavenge(
+    streamId: string,
+    maxAge: number | null,
+    maxCount: number | null
+  ): Promise<void> {
+    // TODO: Implement
   }
 
   /**
    * Gets or initializes a notifier.
    */
   function getNotifier() {
-    if (_notifier) {
-      return _notifier
+    if (notifier) {
+      return notifier
     }
-    _notifier =
+    notifier =
       notifierConfig.type === 'pg-notify'
         ? createPostgresNotifier(pool, logger, notifierConfig.keepAliveInterval)
         : createPollingNotifier(
@@ -524,7 +567,7 @@ export function createPostgresStreamStore(
             logger
           )
     logger.trace(`pg-stream-store: initialized ${notifierConfig.type} notifier`)
-    return _notifier
+    return notifier
   }
 }
 
@@ -555,6 +598,8 @@ function mapReadStreamResult(
     streamId: streamInfo.id,
     streamVersion: streamInfo.stream_version,
     streamPosition: streamInfo.position,
+    maxAge: streamInfo.max_age || null,
+    maxCount: streamInfo.max_count || null,
     streamType: streamInfo.stream_type,
     nextVersion: forward
       ? (lastMessage
@@ -626,6 +671,8 @@ function extractUuidKeyFromConstraintViolationError(err: any): string {
 interface InsertResult {
   current_version: number
   current_position: string
+  max_count: number | null
+  max_age: number | null
 }
 
 /**
@@ -640,5 +687,5 @@ enum AppendResultCodes {
  * @param streamId
  */
 function toMetadataStreamId(streamId: string) {
-  return `$$ meta-${streamId} $$`
+  return `$$${streamId}`
 }

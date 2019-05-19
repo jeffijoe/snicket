@@ -8,6 +8,7 @@ import { delay } from '../../utils/promise-util'
 import { noopLogger } from '../../logging/noop'
 import { PgStreamStoreConfig } from '../types/config'
 import { createPostgresStreamStoreBootstrapper } from '../setup/setup'
+import { waitUntil } from '../../__helpers__/wait-helper'
 
 jest.setTimeout(50000)
 
@@ -50,9 +51,7 @@ test('emits messages over time as they become available', async () => {
   const messages2 = generateMessages(90)
   await store.appendToStream(streamId, appendResult.streamVersion, messages2)
 
-  while (processor.mock.calls.length < 100) {
-    await delay(50)
-  }
+  await waitUntil(() => processor.mock.calls.length >= 100)
 
   expect(processor).toHaveBeenCalledTimes(100)
   await store.dispose()
@@ -85,12 +84,10 @@ test('emits only for new messages', async () => {
   const messages2 = generateMessages(90)
   await store.appendToStream(streamId, appendResult.streamVersion, messages2)
 
-  while (
-    processor1.mock.calls.length < 90 ||
-    processor2.mock.calls.length < 100
-  ) {
-    await delay(50)
-  }
+  await waitUntil(
+    () =>
+      processor1.mock.calls.length >= 90 && processor2.mock.calls.length >= 100
+  )
 
   expect(processor1).toHaveBeenCalledTimes(90)
   expect(processor2).toHaveBeenCalledTimes(100)
@@ -120,13 +117,8 @@ test('can have multiple subscriptions going', async () => {
     afterPosition: SubscribeAt.Beginning
   })
 
-  while (processor1.mock.calls.length < 10) {
-    await delay(50)
-  }
-
-  while (processor2.mock.calls.length < 10) {
-    await delay(50)
-  }
+  await waitUntil(() => processor1.mock.calls.length >= 10)
+  await waitUntil(() => processor2.mock.calls.length >= 10)
 
   expect(processor1).toHaveBeenCalledTimes(10)
   expect(processor2).toHaveBeenCalledTimes(10)
@@ -149,9 +141,7 @@ test('can start from anywhere in the stream', async () => {
     onCaughtUpChanged: caughtUpHandler
   })
 
-  while (processor.mock.calls.length < 50) {
-    await delay(50)
-  }
+  await waitUntil(() => processor.mock.calls.length >= 50)
 
   expect(processor).toHaveBeenCalledTimes(50)
   expect(caughtUpHandler).toHaveBeenNthCalledWith(1, false)
@@ -178,9 +168,7 @@ test('drops subscription on processing error', async () => {
     onSubscriptionDropped: dropped
   })
 
-  while (dropped.mock.calls.length < 1) {
-    await delay(50)
-  }
+  await waitUntil(() => dropped.mock.calls.length >= 1)
 
   expect(dropped).toHaveBeenCalledTimes(1)
   expect(processor).toHaveBeenCalledTimes(2)
@@ -211,9 +199,7 @@ test('retries on pull errors', async () => {
     ExpectedVersion.Empty,
     generateMessages(100)
   )
-  while (processor.mock.calls.length < 100) {
-    await delay(50)
-  }
+  await waitUntil(() => processor.mock.calls.length >= 100)
   expect(errorMock).toHaveBeenCalled()
 })
 
@@ -238,9 +224,7 @@ test('drops subscription when initial pull fails', async () => {
     onSubscriptionDropped: dropped
   })
 
-  while (errorMock.mock.calls.length < 1) {
-    await delay(50)
-  }
+  await waitUntil(() => errorMock.mock.calls.length >= 1)
 
   expect(errorMock).toHaveBeenCalled()
   expect(dropped).toHaveBeenCalled()

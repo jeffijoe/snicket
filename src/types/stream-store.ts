@@ -121,6 +121,8 @@ export interface ReadStreamResult {
   streamVersion: StreamVersion
   streamPosition: MessagePosition
   nextVersion: StreamVersion
+  maxCount: number | null
+  maxAge: number | null
   isEnd: boolean
   messages: StreamMessage[]
 }
@@ -152,6 +154,14 @@ export interface StreamMetadataResult {
    */
   metadataStreamVersion: StreamVersion
   /**
+   * The max age of messages allowed in the stream.
+   */
+  maxAge: number | null
+  /**
+   * The max count of messages allowed in the stream.
+   */
+  maxCount: number | null
+  /**
    * Custom metadata.
    */
   metadata: any | null
@@ -159,12 +169,30 @@ export interface StreamMetadataResult {
 
 /**
  * Options for setting stream metadata.
+ * IMPORTANT: Omitting any fields is the same as explicitly removing it
+ * from the metadata. If you intend on "patching", then you should read
+ * the metadata first.
  */
 export interface SetStreamMetadataOptions {
   /**
+   * The amount of time (in seconds) that messages in the stream are valid for.
+   * Messages older than this won't be returned, and become eligible for scavenging.
+   *
+   * `0` is the same as `null` (not enabled)
+   */
+  maxAge?: number | null
+  /**
+   * The max amount of messages allowed in the stream.
+   * When appending to a stream with `maxCount` set, it will purge extraneous messages
+   * before returning.
+   *
+   * `0` is the same as `null` (not enabled)
+   */
+  maxCount?: number | null
+  /**
    * The stream custom metadata to set.
    */
-  metadata: any
+  metadata?: any
 }
 
 /**

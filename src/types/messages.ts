@@ -50,3 +50,8 @@ export type NewStreamMessage = Omit<
 > & {
   meta?: StreamMessage['meta']
 }
+
+/**
+ * Stream Metadata message type used for setting stream metadata.
+ */
+export const STREAM_METADATA_TYPE = '$stream-metadata'
