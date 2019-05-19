@@ -6,32 +6,38 @@ export function createScripts(schema?: string) {
   return {
     append: (
       streamId: string,
+      metaStreamId: string,
       expectedVersion: number,
       newMessages: Array<NewStreamMessage>
     ) =>
       format(
         replaceSchema(
-          'select current_position, current_version from __schema__.append_to_stream(%L,%L::int,%s::__schema__.new_stream_message[])',
+          'select current_position, current_version, max_age, max_count from __schema__.append_to_stream(%L,%L::int,%L,%s::__schema__.new_stream_message[])',
           schema
         ),
         streamId,
         expectedVersion,
+        metaStreamId,
         serializeMessages(newMessages)
       ),
     setStreamMetadata: (
       streamId: string,
       metaStreamId: string,
       expectedVersion: number,
+      maxAge: number | null,
+      maxCount: number | null,
       message: NewStreamMessage
     ) =>
       format(
         replaceSchema(
-          'select __schema__.set_stream_metadata(%L::text,%L::text,%L::int,%s::__schema__.new_stream_message) as current_version',
+          'select __schema__.set_stream_metadata(%L::text,%L::text,%L::int,%L::int,%L::int,%s::__schema__.new_stream_message) as current_version',
           schema
         ),
         streamId,
         metaStreamId,
         expectedVersion,
+        maxAge || 0,
+        maxCount || 0,
         serializeMessage(message)
       ),
     readStreamInfo: (streamId: string) =>

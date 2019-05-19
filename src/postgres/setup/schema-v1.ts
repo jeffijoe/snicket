@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS __schema__.stream (
     id text NOT NULL UNIQUE,
     id_internal bigserial PRIMARY KEY,
     version integer NOT NULL DEFAULT '-1'::integer,
-    position bigint NOT NULL DEFAULT '-1'::bigint
+    position bigint NOT NULL DEFAULT '-1'::bigint,
+    max_age integer DEFAULT NULL,
+    max_count integer DEFAULT NULL
 );
 
 /**
@@ -44,7 +46,7 @@ ALTER SEQUENCE __schema__.message_seq
 OWNED BY __schema__.message.position;
 
 /**
- * Creates indexes.
+ * Creates the new_stream_message type.
  */
 DO $F$
 begin
@@ -65,12 +67,15 @@ end $F$;
 create or replace function __schema__.append_to_stream(
   _streamId text,
   _expectedVersion int,
+  _metadataStreamId text,
   _newMessages __schema__.new_stream_message []
-) returns table (current_position bigint, current_version int) as $$
+) returns table (current_position bigint, current_version int, max_age int, max_count int) as $$
 declare
   _currentVersion int;
   _streamIdInternal bigint;
   _lastPosition bigint;
+  _maxAge int;
+  _maxCount int;
   _msg __schema__.new_stream_message;
 begin
   select
@@ -80,16 +85,30 @@ begin
   where id = _streamId;
 
   if not found then
-    insert into __schema__.stream(id, "version", "position")
-    values(_streamId, -1, -1)
-    returning id_internal into _streamIdInternal;
+    /* 
+      No stream yet, but we might have metadata for one, in which case we need to
+      grab the maxAge and maxCount.
+     */
+    select __schema__.message.data->>'maxAge', __schema__.message.data->>'maxCount'
+      into _maxAge, _maxCount
+    from __schema__.message
+      join __schema__.stream 
+      on __schema__.message.stream_id_internal = __schema__.stream.id_internal
+    where
+      __schema__.stream.id = _metadataStreamId
+    order by __schema__.message.stream_version desc
+    limit 1;
+
+    insert into __schema__.stream(id, "version", "position", "max_age", "max_count")
+    values(_streamId, -1, -1, NULLIF(_maxAge, 0), NULLIF(_maxCount, 0))
+    returning id_internal, __schema__.stream.max_age, __schema__.stream.max_count into _streamIdInternal, _maxAge, _maxCount;
     _currentVersion := -1;
   end if;
 
   if _expectedVersion != _currentVersion then
     if _expectedVersion != -2 then
       /* Treat these values as a concurrency error in code */
-      return query select -9::bigint, -9;
+      return query select -9::bigint, -9, null::int, null::int;
       return;
     else
       /* Get the latest message's version in the stream */
@@ -125,9 +144,10 @@ begin
 
   update __schema__.stream
   set "version" = _currentVersion, "position" = _lastPosition
-  where id_internal = _streamIdInternal;
+  where id_internal = _streamIdInternal
+  returning __schema__.stream.max_age, __schema__.stream.max_count into _maxAge, _maxCount;
   NOTIFY new_messages;
-  return query select _lastPosition, _currentVersion;
+  return query select _lastPosition, _currentVersion, _maxAge::int, _maxCount::int;
 end;
 $$ language plpgsql;
 
@@ -139,7 +159,9 @@ create or replace function __schema__.read_stream_info(
 ) returns table (
   id text,
   stream_version int,
-  "position" bigint
+  "position" bigint,
+  max_age integer,
+  max_count integer
 )
 as $$
 begin
@@ -147,7 +169,9 @@ begin
   select
     __schema__.stream.id,
     __schema__.stream.version as stream_version,
-    __schema__.stream.position
+    __schema__.stream.position,
+    __schema__.stream.max_age,
+    __schema__.stream.max_count
   from __schema__.stream
   where __schema__.stream.id = _streamId
   limit 1;
@@ -283,6 +307,8 @@ create or replace function __schema__.set_stream_metadata(
   _streamId text,
   _metadataStreamId text,
   _expectedVersion int,
+  _maxAge int,
+  _maxCount int,
   _metadataMessage __schema__.new_stream_message
 ) returns int as $$
 declare
@@ -293,6 +319,7 @@ begin
   from __schema__.append_to_stream(
     _metadataStreamId,
     _expectedVersion,
+    null,
     ARRAY [_metadataMessage]
   )
   into _currentVersion;
@@ -300,6 +327,11 @@ begin
   if _currentVersion = -9 then
     return -9;
   end if;
+
+  update __schema__.stream
+  set "max_age" = NULLIF(_maxAge, 0),
+      "max_count" = NULLIF(_maxCount, 0)
+  where id = _metadataStreamId;
 
   return _currentVersion;  
 end
@@ -315,6 +347,7 @@ DROP TABLE IF EXISTS __schema__.stream;
 DROP FUNCTION IF EXISTS __schema__.append_to_stream(
   text,
   int, 
+  text,
   __schema__.new_stream_message []
 ) CASCADE;
 DROP FUNCTION IF EXISTS __schema__.read_stream(

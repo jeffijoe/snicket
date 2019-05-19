@@ -10,7 +10,9 @@ export function createPostgresPool({
   ssl,
   user,
   password,
-  database
+  database,
+  min,
+  max
 }: DatabaseConnectionOptions) {
   return new Pool({
     password,
@@ -19,9 +21,9 @@ export function createPostgresPool({
     port,
     ssl,
     user,
-    min: 0,
+    min: min || 0,
     idleTimeoutMillis: 2 * 60 * 1000,
-    max: 10
+    max: max || 10
   })
 }
 

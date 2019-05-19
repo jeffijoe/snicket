@@ -18,6 +18,7 @@ const noop = () => {}
 
 /**
  * Creates a stream subscription.
+ * This is a low-level API and is consumed by the stream store implementations themselves.
  *
  * @param streamId
  * @param store

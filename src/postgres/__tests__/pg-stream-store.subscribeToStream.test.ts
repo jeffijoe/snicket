@@ -7,6 +7,7 @@ import { SubscribeAt } from '../../types/subscriptions'
 import { delay } from '../../utils/promise-util'
 import { noopLogger } from '../../logging/noop'
 import { createResetEvent } from '../../utils/reset-event'
+import { waitUntil } from '../../__helpers__/wait-helper'
 
 jest.setTimeout(50000)
 
@@ -32,9 +33,7 @@ test('emits messages over time as they become available', async () => {
   const messages2 = generateMessages(90)
   await store.appendToStream(streamId, appendResult.streamVersion, messages2)
 
-  while (processor.mock.calls.length < 100) {
-    await delay(50)
-  }
+  await waitUntil(() => processor.mock.calls.length >= 100)
 
   expect(processor).toHaveBeenCalledTimes(100)
   await store.dispose()
@@ -68,9 +67,9 @@ test('emits only for new messages', async () => {
   const messages2 = generateMessages(90)
   await store.appendToStream(streamId, appendResult.streamVersion, messages2)
 
-  while (later.mock.calls.length < 90 || earlier.mock.calls.length < 100) {
-    await delay(50)
-  }
+  await waitUntil(
+    () => later.mock.calls.length >= 90 && earlier.mock.calls.length >= 100
+  )
 
   expect(later).toHaveBeenCalledTimes(90)
   expect(earlier).toHaveBeenCalledTimes(100)
@@ -100,13 +99,10 @@ test('can have multiple subscriptions going', async () => {
     afterVersion: SubscribeAt.Beginning
   })
 
-  while (processor1.mock.calls.length < 10) {
-    await delay(50)
-  }
-
-  while (processor2.mock.calls.length < 10) {
-    await delay(50)
-  }
+  await waitUntil(
+    () =>
+      processor1.mock.calls.length >= 10 && processor2.mock.calls.length >= 10
+  )
 
   expect(processor1).toHaveBeenCalledTimes(10)
   expect(processor2).toHaveBeenCalledTimes(10)
@@ -129,9 +125,7 @@ test('can start from anywhere in the stream', async () => {
     onCaughtUpChanged: caughtUpHandler
   })
 
-  while (processor.mock.calls.length < 50) {
-    await delay(50)
-  }
+  await waitUntil(() => processor.mock.calls.length >= 50)
 
   expect(processor).toHaveBeenCalledTimes(50)
   expect(caughtUpHandler).toHaveBeenNthCalledWith(1, false)
@@ -165,9 +159,7 @@ test('drops subscription on initialization error', async () => {
     onSubscriptionDropped: dropped
   })
 
-  while (dropped.mock.calls.length < 1) {
-    await delay(50)
-  }
+  await waitUntil(() => dropped.mock.calls.length >= 1)
 
   expect(dropped).toHaveBeenCalledTimes(1)
   expect(processor).not.toHaveBeenCalled()
@@ -194,9 +186,7 @@ test('drops subscription on processing error', async () => {
     onSubscriptionDropped: dropped
   })
 
-  while (dropped.mock.calls.length < 1) {
-    await delay(50)
-  }
+  await waitUntil(() => dropped.mock.calls.length >= 1)
 
   expect(dropped).toHaveBeenCalledTimes(1)
   expect(processor).toHaveBeenCalledTimes(2)
@@ -227,9 +217,7 @@ test('retries on pull errors', async () => {
     ExpectedVersion.Empty,
     generateMessages(100)
   )
-  while (processor.mock.calls.length < 100) {
-    await delay(50)
-  }
+  await waitUntil(() => processor.mock.calls.length >= 100)
   expect(errorMock).toHaveBeenCalled()
 })
 
@@ -254,10 +242,7 @@ test('drops subscription when initial pull fails', async () => {
     afterVersion: SubscribeAt.End,
     onSubscriptionDropped: dropped
   })
-
-  while (errorMock.mock.calls.length < 1) {
-    await delay(50)
-  }
+  await waitUntil(() => errorMock.mock.calls.length >= 1)
 
   expect(errorMock).toHaveBeenCalled()
   expect(dropped).toHaveBeenCalled()

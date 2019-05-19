@@ -10,6 +10,7 @@ import {
   InvalidParameterError
 } from '../../errors/errors'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
+import { createResetEvent } from '../../utils/reset-event'
 
 jest.setTimeout(6000000)
 
@@ -90,15 +91,22 @@ describe('appending', () => {
     )
     expect(result.streamVersion).toBe(4)
 
+    const succeeded = createResetEvent()
     await expect(
       Promise.all(
         _.range(20).map(() =>
           store
             .appendToStream(streamId, result.streamVersion, generateMessages(2))
             .then(r => (result = r))
+            .then(succeeded.set)
         )
       )
     ).rejects.toBeInstanceOf(ConcurrencyError)
+    // There's a race condition which is fine in real code but causes the test to fail in like a 1/100 chance.
+    // Basically, if a concurrency error is caught before one of the concurrently running appends succeed (and one will!),
+    // we reach this point but the succeeding append hasn't updated the result yet.
+    // That's why we are using this little trick with the reset event.
+    await succeeded.wait()
     expect(result.streamVersion).toBe(6)
   })
 
