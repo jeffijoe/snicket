@@ -16,8 +16,10 @@ export interface PgStreamStoreConfig {
    * How many times to reload if there are gaps detected.
    */
   gapReloadTimes?: number
+  /**
+   * The notififer configuration. Used for subscriptions.
+   */
   notifierConfig?: NotifierConfig
-
   /**
    * Logger.
    */

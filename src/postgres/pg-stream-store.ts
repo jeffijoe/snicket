@@ -13,7 +13,6 @@ import {
 } from '../types/stream-store'
 import {
   ConcurrencyError,
-  InconsistentStreamTypeError,
   DuplicateMessageError,
   DisposedError,
   InvalidParameterError

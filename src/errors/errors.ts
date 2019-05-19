@@ -17,13 +17,6 @@ export class DuplicateMessageError extends MakeErrorClass() {
 }
 
 /**
- * Thrown when a concurrency error occurs in the event store.
- */
-export class InconsistentStreamTypeError extends MakeErrorClass(
-  'Attempted to write to a stream, but the stream type did not match.'
-) {}
-
-/**
  * Thrown when a resource is being/been disposed
  */
 export class DisposedError extends MakeErrorClass(

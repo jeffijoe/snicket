@@ -6,7 +6,6 @@ import { createPostgresStreamStore, PgStreamStore } from '../pg-stream-store'
 import { v4 } from 'uuid'
 import {
   ConcurrencyError,
-  InconsistentStreamTypeError,
   DuplicateMessageError,
   InvalidParameterError
 } from '../../errors/errors'
