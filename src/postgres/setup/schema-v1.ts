@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS __schema__.message (
     message_id uuid NOT NULL UNIQUE,
     stream_version integer NOT NULL,
     position bigint NOT NULL PRIMARY KEY DEFAULT nextval('__schema__.message_seq'),
-    date_created timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc'),
+    created_at timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc'),
     type text NOT NULL,
     data jsonb NOT NULL,
     meta jsonb NOT NULL DEFAULT '{}',
@@ -68,6 +68,7 @@ create or replace function __schema__.append_to_stream(
   _streamId text,
   _expectedVersion int,
   _metadataStreamId text,
+  _createdAt timestamp with time zone,
   _newMessages __schema__.new_stream_message []
 ) returns table (current_position bigint, current_version int, max_age int, max_count int) as $$
 declare
@@ -78,6 +79,10 @@ declare
   _maxCount int;
   _msg __schema__.new_stream_message;
 begin
+  if _createdAt is null then
+    _createdAt = now() at time zone 'utc';
+  end if;
+
   select
     "id_internal", "version"
     into _streamIdInternal, _currentVersion
@@ -127,6 +132,7 @@ begin
       "stream_id_internal",
       "message_id",
       "stream_version",
+      "created_at",
       "type",
       "data",
       "meta"
@@ -135,6 +141,7 @@ begin
       _streamIdInternal,
       _msg.message_id,
       _currentVersion,
+      _createdAt,
       _msg.type,
       _msg.data,
       _msg.meta
@@ -191,7 +198,7 @@ create or replace function __schema__.read_stream(
   message_id uuid,
   stream_version int,
   "position" bigint,
-  date_created timestamp with time zone,
+  created_at timestamp with time zone,
   "type" text,
   "data" jsonb,
   meta jsonb
@@ -211,7 +218,7 @@ begin
     __schema__.message.message_id,
     __schema__.message.stream_version,
     __schema__.message.position,
-    __schema__.message.date_created,
+    __schema__.message.created_at,
     __schema__.message.type,
     __schema__.message.data,
     __schema__.message.meta
@@ -260,7 +267,7 @@ create or replace function __schema__.read_all(
     message_id uuid,
     stream_version int,
     "position" bigint,
-    date_created timestamp with time zone,
+    created_at timestamp with time zone,
     "type" text,
     "data" jsonb,
     meta jsonb
@@ -273,7 +280,7 @@ begin
     __schema__.message.message_id,
     __schema__.message.stream_version,
     __schema__.message.position,
-    __schema__.message.date_created,
+    __schema__.message.created_at,
     __schema__.message.type,
     __schema__.message.data,
     __schema__.message.meta
@@ -309,6 +316,7 @@ create or replace function __schema__.set_stream_metadata(
   _expectedVersion int,
   _maxAge int,
   _maxCount int,
+  _createdAt timestamp with time zone,
   _metadataMessage __schema__.new_stream_message
 ) returns int as $$
 declare
@@ -320,6 +328,7 @@ begin
     _metadataStreamId,
     _expectedVersion,
     null,
+    _createdAt,
     ARRAY [_metadataMessage]
   )
   into _currentVersion;
@@ -348,6 +357,7 @@ DROP FUNCTION IF EXISTS __schema__.append_to_stream(
   text,
   int, 
   text,
+  timestamp with time zone,
   __schema__.new_stream_message []
 ) CASCADE;
 DROP FUNCTION IF EXISTS __schema__.read_stream(
@@ -369,6 +379,7 @@ DROP FUNCTION IF EXISTS __schema__.set_stream_metadata(
  text,
  text,
  int,
+ timestamp with time zone,
  __schema__.new_stream_message
 ) CASCADE;
 DROP TYPE IF EXISTS __schema__.new_stream_message CASCADE;

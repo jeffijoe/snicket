@@ -21,9 +21,21 @@ export interface PgStreamStoreConfig {
    */
   notifierConfig?: NotifierConfig
   /**
+   * If `true`, waits for a scavenge to complete before returning from `append`.
+   * This does not affect setting a stream's metadata, that is always awaited.
+   * Defaults to `false`.
+   */
+  scavengeSynchronously?: boolean
+  /**
    * Logger.
    */
   logger?: Logger
+  /**
+   * Used when inserting messages to figure out what the time is.
+   * If it returns `null`, the DB server time in UTC is used.
+   * This is here for testing purposes.
+   */
+  getCurrentTime?: () => Date | null
 }
 
 /**

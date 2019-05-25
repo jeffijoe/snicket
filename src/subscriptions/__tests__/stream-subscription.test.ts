@@ -14,7 +14,7 @@ const messages: StreamMessage[] = _.range(1, 11).map<StreamMessage>(i => ({
   data: { i },
   causationId: v4(),
   correlationId: v4(),
-  dateCreated: new Date(),
+  createdAt: new Date(),
   position: i.toString(),
   meta: {},
   streamId: streamId,

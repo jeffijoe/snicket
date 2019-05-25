@@ -106,6 +106,14 @@ export interface StreamStore {
     subscriptionOptions?: AllSubscriptionOptions
   ): Promise<AllSubscription>
 
+  // /**
+  //  * Deletes a stream and all of it's messages.
+  //  */
+  // deleteStream(
+  //   streamId: string,
+  //   expectedVersion: ExpectedVersion
+  // ): Promise<void>
+
   /**
    * Disposes of the underlying store connection.
    * Returns a `Promise` when done.

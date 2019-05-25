@@ -78,7 +78,7 @@ test('pg notifier is faster than polling', async () => {
     ...cfg,
     notifierConfig: {
       type: 'poll',
-      pollingInterval: 100 // This is a relatively high frequency for polling
+      pollingInterval: 200 // This is a relatively high frequency for polling
     }
   })
 
