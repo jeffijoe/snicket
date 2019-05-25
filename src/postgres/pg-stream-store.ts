@@ -33,7 +33,8 @@ import {
   StreamMessage,
   MessagePosition,
   Position,
-  STREAM_METADATA_TYPE
+  STREAM_METADATA_TYPE,
+  DELETED_STREAM
 } from '../types/messages'
 import { PgStreamStoreConfig } from './types/config'
 import { createPostgresPool, runInTransaction } from './connection'
@@ -94,6 +95,8 @@ export function createPostgresStreamStore(
     setStreamMetadata,
     subscribeToStream,
     subscribeToAll,
+    deleteMessage,
+    deleteStream,
     dispose
   }
 
@@ -418,6 +421,71 @@ export function createPostgresStreamStore(
       throwIfErrorCode(result.current_version)
       await maybeScavenge(streamId, data.maxAge, data.maxCount)
       return { currentVersion: result.current_version }
+    } finally {
+      writeLatch.exit()
+    }
+  }
+
+  /**
+   * Deletes a stream.
+   *
+   * @param streamId
+   * @param expectedVersion
+   */
+  async function deleteStream(
+    streamId: string,
+    expectedVersion: ExpectedVersion
+  ): Promise<void> {
+    writeLatch.enter()
+    try {
+      await runInTransaction(pool, trx =>
+        trx.query(
+          scripts.deleteStream(
+            streamId,
+            DELETED_STREAM,
+            expectedVersion,
+            getCurrentTime()
+          )
+        )
+      )
+    } finally {
+      writeLatch.exit()
+    }
+  }
+
+  /**
+   * Deletes a stream message.
+   *
+   * @param streamId
+   * @param messageId
+   */
+  async function deleteMessage(
+    streamId: string,
+    messageId: string
+  ): Promise<void> {
+    return deleteMessages(streamId, [messageId])
+  }
+
+  /**
+   * Deletes messages in a stream.
+   *
+   * @param streamId
+   * @param expectedVersion
+   */
+  async function deleteMessages(
+    streamId: string,
+    messageIds: Array<string>
+  ): Promise<void> {
+    writeLatch.enter()
+    try {
+      await runInTransaction(pool, trx =>
+        trx.query(scripts.deleteMessages(streamId, messageIds))
+      )
+      logger.trace(
+        `pg-stream-store: deleted ${
+          messageIds.length
+        } messages from stream ${streamId}`
+      )
     } finally {
       writeLatch.exit()
     }

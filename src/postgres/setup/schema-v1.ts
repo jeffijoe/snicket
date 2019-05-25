@@ -345,6 +345,30 @@ begin
   return _currentVersion;  
 end
 $$ language plpgsql;
+
+/**
+ * Deletes messages in a stream.
+ */
+create or replace function __schema__.delete_messages(
+  _streamId text,
+  _messageIds uuid []
+) returns int as $$
+declare
+  _streamIdInternal int;
+  _deletedCount int;
+begin
+  select __schema__.stream.id_internal
+    into _streamIdInternal
+  from __schema__.stream
+  where __schema__.stream.id = _streamId;
+
+  delete from __schema__.message
+  where __schema__.message.stream_id_internal = _streamIdInternal
+    and __schema__.message.message_id = any (_messageIds);
+
+  return count(_messageIds);
+end
+$$ language plpgsql;
 `
 
 /**
@@ -381,6 +405,10 @@ DROP FUNCTION IF EXISTS __schema__.set_stream_metadata(
  int,
  timestamp with time zone,
  __schema__.new_stream_message
+) CASCADE;
+DROP FUNCTION IF EXISTS __schema__.delete_messages(
+  text,
+  uuid []
 ) CASCADE;
 DROP TYPE IF EXISTS __schema__.new_stream_message CASCADE;
 DROP SCHEMA IF EXISTS __schema__;
