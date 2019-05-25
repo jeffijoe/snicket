@@ -41,7 +41,7 @@ export function createScripts(schema?: string) {
         expectedVersion,
         maxAge || 0,
         maxCount || 0,
-        createdAt ? createdAt.toISOString() : null,
+        createdAt,
         serializeMessage(message)
       ),
     readStreamInfo: (streamId: string) =>
@@ -79,6 +79,30 @@ export function createScripts(schema?: string) {
         count,
         fromPositionInclusive,
         forward
+      ),
+    deleteMessages: (streamId: string, messageIds: Array<string>) =>
+      format(
+        replaceSchema(
+          'select * from __schema__.delete_messages(%L, ARRAY[%L]::uuid[])',
+          schema
+        ),
+        streamId,
+        messageIds
+      ),
+    deleteStream: (
+      streamId: string,
+      deletedStreamId: string,
+      expectedVersion: number,
+      createdAt: Date | null
+    ) =>
+      format(
+        replaceSchema(
+          'select * from __schema__.delete_stream(%L,%L,%L::timestamp with time zone)',
+          schema
+        ),
+        streamId,
+        expectedVersion,
+        createdAt
       )
   }
 }

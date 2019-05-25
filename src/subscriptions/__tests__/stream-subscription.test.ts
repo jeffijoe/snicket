@@ -43,6 +43,8 @@ beforeEach(() => {
     readAll: null as any,
     getStreamMetadata: null as any,
     setStreamMetadata: null as any,
+    deleteMessage: null as any,
+    deleteStream: null as any,
     subscribeToAll: null as any
   }
   readHeadPositionMock.mockReturnValue(_.last(messages)!.position.toString())

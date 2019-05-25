@@ -55,3 +55,9 @@ export type NewStreamMessage = Omit<
  * Stream Metadata message type used for setting stream metadata.
  */
 export const STREAM_METADATA_TYPE = '$stream-metadata'
+
+/**
+ * The stream ID of the $deleted stream, which contains messages
+ * regarding stream deletions.
+ */
+export const DELETED_STREAM = '$deleted'
