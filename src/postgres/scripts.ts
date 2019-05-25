@@ -8,16 +8,18 @@ export function createScripts(schema?: string) {
       streamId: string,
       metaStreamId: string,
       expectedVersion: number,
+      createdAt: Date | null,
       newMessages: Array<NewStreamMessage>
     ) =>
       format(
         replaceSchema(
-          'select current_position, current_version, max_age, max_count from __schema__.append_to_stream(%L,%L::int,%L,%s::__schema__.new_stream_message[])',
+          'select current_position, current_version, max_age, max_count from __schema__.append_to_stream(%L,%L::int,%L,%L::timestamp with time zone,%s::__schema__.new_stream_message[])',
           schema
         ),
         streamId,
         expectedVersion,
         metaStreamId,
+        createdAt ? createdAt.toISOString() : null,
         serializeMessages(newMessages)
       ),
     setStreamMetadata: (
@@ -26,11 +28,12 @@ export function createScripts(schema?: string) {
       expectedVersion: number,
       maxAge: number | null,
       maxCount: number | null,
+      createdAt: Date | null,
       message: NewStreamMessage
     ) =>
       format(
         replaceSchema(
-          'select __schema__.set_stream_metadata(%L::text,%L::text,%L::int,%L::int,%L::int,%s::__schema__.new_stream_message) as current_version',
+          'select __schema__.set_stream_metadata(%L::text,%L::text,%L::int,%L::int,%L::int,%L::timestamp with time zone,%s::__schema__.new_stream_message) as current_version',
           schema
         ),
         streamId,
@@ -38,6 +41,7 @@ export function createScripts(schema?: string) {
         expectedVersion,
         maxAge || 0,
         maxCount || 0,
+        createdAt ? createdAt.toISOString() : null,
         serializeMessage(message)
       ),
     readStreamInfo: (streamId: string) =>

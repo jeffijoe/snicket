@@ -36,7 +36,7 @@ export interface StreamMessage {
   position: MessagePosition
   data: any
   type: string
-  dateCreated: Date
+  createdAt: Date
   streamId: string
   streamVersion: StreamVersion
   meta: any
@@ -46,7 +46,7 @@ export interface StreamMessage {
  */
 export type NewStreamMessage = Omit<
   StreamMessage,
-  'position' | 'dateCreated' | 'streamId' | 'streamVersion' | 'meta'
+  'position' | 'createdAt' | 'streamId' | 'streamVersion' | 'meta'
 > & {
   meta?: StreamMessage['meta']
 }

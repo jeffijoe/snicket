@@ -36,7 +36,7 @@ describe('reading a stream', () => {
           streamId: streamId,
           data: { hello: 'world' },
           meta: { me: 'ta' },
-          dateCreated: expect.any(Date),
+          createdAt: expect.any(Date),
           type: 'greeting',
           position: expect.any(String)
         })

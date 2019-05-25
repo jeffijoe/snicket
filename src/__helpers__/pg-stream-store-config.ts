@@ -5,6 +5,7 @@ import { noopLogger } from '../logging/noop'
 export const streamStoreCfg: PgStreamStoreConfig = {
   logger: noopLogger,
   gapReloadDelay: 1000,
+  scavengeSynchronously: true,
   pg: {
     dropIfTest: true,
     schema: env.STREAMS_PG_SCHEMA,

@@ -72,10 +72,10 @@ export function createPostgresStreamStore(
   const notifierConfig = config.notifierConfig || {
     type: 'poll'
   }
-
+  const scavengeSynchronously = !!config.scavengeSynchronously
   const pool = createPostgresPool(config.pg)
   const scripts = createScripts(config.pg.schema)
-
+  const getCurrentTime = config.getCurrentTime || (() => null)
   // Keep track of subscriptions so we can dispose them when the store is disposed.
   let subscriptions: Subscription[] = []
   // Cache the notifier.
@@ -134,10 +134,11 @@ export function createPostgresStreamStore(
         } = await insertMessages(streamId, expectedVersion, newMessages)
 
         throwIfErrorCode(current_version)
-        await maybeScavenge(streamId, max_count, max_age)
         return {
           streamPosition: current_position,
-          streamVersion: current_version
+          streamVersion: current_version,
+          maxAge: max_age,
+          maxCount: max_count
         }
       } catch (error) {
         if (isConcurrencyUniqueConstraintViolation(error)) {
@@ -164,12 +165,22 @@ export function createPostgresStreamStore(
 
     writeLatch.enter()
     try {
-      return await retry(retryableAppendToStream, {
-        factor: 1.05,
-        tries: 200,
-        minTimeout: 0,
-        maxTimeout: 50
-      })
+      const { streamPosition, streamVersion, maxAge, maxCount } = await retry(
+        retryableAppendToStream,
+        {
+          factor: 1.05,
+          tries: 200,
+          minTimeout: 0,
+          maxTimeout: 50
+        }
+      )
+
+      const scavengePromise = maybeScavenge(streamId, maxAge, maxCount)
+      if (scavengeSynchronously || disposing) {
+        await scavengePromise
+      }
+
+      return { streamPosition, streamVersion }
     } finally {
       writeLatch.exit()
     }
@@ -378,30 +389,38 @@ export function createPostgresStreamStore(
     opts: SetStreamMetadataOptions
   ): Promise<SetStreamMetadataResult> {
     const metaStreamId = toMetadataStreamId(streamId)
-    const result = await runInTransaction(pool, trx => {
-      return trx
-        .query(
-          scripts.setStreamMetadata(
-            streamId,
-            metaStreamId,
-            expectedVersion,
-            opts.maxAge || null,
-            opts.maxCount || null,
-            {
-              messageId: v4(),
-              data: {
-                metadata: opts.metadata || {},
-                maxAge: opts.maxAge || null,
-                maxCount: opts.maxCount || null
-              },
-              type: STREAM_METADATA_TYPE
-            }
+    writeLatch.enter()
+    try {
+      const data = {
+        metadata: opts.metadata || {},
+        maxAge: opts.maxAge || null,
+        maxCount: opts.maxCount || null
+      }
+      const result = await runInTransaction(pool, trx => {
+        return trx
+          .query(
+            scripts.setStreamMetadata(
+              streamId,
+              metaStreamId,
+              expectedVersion,
+              opts.maxAge || null,
+              opts.maxCount || null,
+              getCurrentTime(),
+              {
+                data,
+                messageId: v4(),
+                type: STREAM_METADATA_TYPE
+              }
+            )
           )
-        )
-        .then(x => x.rows[0])
-    })
-    throwIfErrorCode(result.current_version)
-    return { currentVersion: result.current_version }
+          .then(x => x.rows[0])
+      })
+      throwIfErrorCode(result.current_version)
+      await maybeScavenge(streamId, data.maxAge, data.maxCount)
+      return { currentVersion: result.current_version }
+    } finally {
+      writeLatch.exit()
+    }
   }
 
   /**
@@ -527,6 +546,7 @@ export function createPostgresStreamStore(
             streamId,
             toMetadataStreamId(streamId),
             expectedVersion,
+            getCurrentTime(),
             newMessages
           )
         )
@@ -549,6 +569,26 @@ export function createPostgresStreamStore(
     maxCount: number | null
   ): Promise<void> {
     // TODO: Implement
+    try {
+      if (streamId.startsWith('$')) {
+        return
+      }
+
+      // await runInTransaction(pool, trx => {
+      //   return trx
+      //     .query(
+      //       scripts.append(
+      //         streamId,
+      //         toMetadataStreamId(streamId),
+      //         expectedVersion,
+      //         newMessages
+      //       )
+      //     )
+      //     .then(x => x.rows[0])
+      // })
+    } catch (err) {
+      logger.error('pg-stream-store:scavenge: error while scavenging', err)
+    }
   }
 
   /**
@@ -625,7 +665,7 @@ function mapMessageResult(message: any): StreamMessage {
     messageId: message.message_id,
     data: message.data,
     meta: message.meta,
-    dateCreated: message.date_created,
+    createdAt: message.created_at,
     type: message.type,
     position: message.position,
     streamVersion: message.stream_version
@@ -688,4 +728,11 @@ enum AppendResultCodes {
  */
 function toMetadataStreamId(streamId: string) {
   return `$$${streamId}`
+}
+
+/**
+ * Determines if the specified stream ID is a meta stream.
+ */
+function isMetaStream(streamId: string) {
+  return streamId.startsWith('$')
 }
