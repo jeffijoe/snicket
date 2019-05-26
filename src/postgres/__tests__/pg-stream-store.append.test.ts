@@ -42,6 +42,12 @@ describe('appending', () => {
     expect(result.streamVersion).toBe(6)
   })
 
+  test('throws on bad stream name', async () => {
+    await expect(
+      store.appendToStream('$lol', ExpectedVersion.Any, [])
+    ).rejects.toBeInstanceOf(InvalidParameterError)
+  })
+
   test('throws concurrency error when creating the stream', async () => {
     const streamId = v4()
     let result: AppendToStreamResult = null!

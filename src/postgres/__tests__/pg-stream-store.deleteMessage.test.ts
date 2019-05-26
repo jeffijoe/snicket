@@ -1,4 +1,4 @@
-import { StreamStore, ExpectedVersion } from '../../types/stream-store'
+import { ExpectedVersion } from '../../types/stream-store'
 import { createPostgresStreamStore } from '../pg-stream-store'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 import { v4 } from 'uuid'

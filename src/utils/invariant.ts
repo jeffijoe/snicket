@@ -30,6 +30,18 @@ export function requiredString(paramName: string, value: any): string | never {
 }
 
 /**
+ *
+ * @param paramName
+ * @param streamId
+ */
+export function notOperationalStream(paramName: string, streamId: string) {
+  return assert(
+    `${paramName} must not start with a "$", as they are reserved for operational streams.`,
+    !streamId.startsWith('$')
+  )
+}
+
+/**
  * Runs the given check fn, throws an error with the specified message if the check returns false.
  *
  * @param message
