@@ -19,7 +19,7 @@ export function createScripts(schema?: string) {
         streamId,
         expectedVersion,
         metaStreamId,
-        createdAt ? createdAt.toISOString() : null,
+        serializeDate(createdAt),
         serializeMessages(newMessages)
       ),
     setStreamMetadata: (
@@ -41,7 +41,7 @@ export function createScripts(schema?: string) {
         expectedVersion,
         maxAge || 0,
         maxCount || 0,
-        createdAt,
+        serializeDate(createdAt),
         serializeMessage(message)
       ),
     readStreamInfo: (streamId: string) =>
@@ -93,16 +93,19 @@ export function createScripts(schema?: string) {
       streamId: string,
       deletedStreamId: string,
       expectedVersion: number,
-      createdAt: Date | null
+      createdAt: Date | null,
+      deletedStreamMessage: NewStreamMessage
     ) =>
       format(
         replaceSchema(
-          'select * from __schema__.delete_stream(%L,%L,%L::timestamp with time zone)',
+          'select * from __schema__.delete_stream(%L,%L,%L,%L::timestamp with time zone, %s::__schema__.new_stream_message)',
           schema
         ),
         streamId,
         expectedVersion,
-        createdAt
+        deletedStreamId,
+        serializeDate(createdAt),
+        serializeMessage(deletedStreamMessage)
       )
   }
 }
@@ -129,4 +132,11 @@ function serializeMessage(message: NewStreamMessage) {
     message.data,
     message.meta || {}
   )
+}
+
+/**
+ * Serializes a date
+ */
+function serializeDate(date: Date | null) {
+  return date ? date.toISOString() : null
 }

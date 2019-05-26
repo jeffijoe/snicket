@@ -84,6 +84,8 @@ export interface StreamStore {
 
   /**
    * Subscribes to a stream.
+   * If no `subscriptionOptions.afterVersion` is specified,
+   * starts subscribing at the head of the stream.
    *
    * @param streamId
    * @param processMessage
@@ -97,6 +99,8 @@ export interface StreamStore {
 
   /**
    * Subscribe to the all-stream.
+   * If no `subscriptionOptions.afterPosition` is specified,
+   * starts subscribing at the head of the all-stream.
    *
    * @param processMessage
    * @param subscriptionOptions

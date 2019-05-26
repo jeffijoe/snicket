@@ -52,12 +52,26 @@ export type NewStreamMessage = Omit<
 }
 
 /**
- * Stream Metadata message type used for setting stream metadata.
+ * Message types used by store operations.
  */
-export const STREAM_METADATA_TYPE = '$stream-metadata'
+export enum OperationalMessageType {
+  StreamDeleted = '$stream-deleted',
+  Metadata = '$stream-metadata'
+}
 
 /**
- * The stream ID of the $deleted stream, which contains messages
- * regarding stream deletions.
+ * Streams used by store operations.
  */
-export const DELETED_STREAM = '$deleted'
+export enum OperationalStream {
+  Deleted = '$deleted'
+}
+
+/**
+ * The payload of a `StreamDeleted` message.
+ */
+export interface StreamDeleted {
+  /**
+   * ID of the stream that was deleted.
+   */
+  streamId: string
+}

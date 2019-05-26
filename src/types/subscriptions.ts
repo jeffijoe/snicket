@@ -82,7 +82,6 @@ export enum SubscribeAt {
    * Subscribe from the beginning.
    */
   Beginning = -2,
-
   /**
    * Subscribe at the end
    */

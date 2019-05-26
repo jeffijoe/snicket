@@ -369,6 +369,75 @@ begin
   return count(_messageIds);
 end
 $$ language plpgsql;
+
+/**
+ * Deletes messages in a stream.
+ */
+create or replace function __schema__.delete_stream(
+  _streamId text,
+  _expectedVersion int,
+  _deletedStreamId text,
+  _createdAt timestamp with time zone,
+  _deletedStreamMessage __schema__.new_stream_message
+) returns int
+as $$
+declare
+  _streamIdInternal int;
+  _latestStreamVersion int;
+  _affected int;
+begin
+  /**
+   * Start with the concurrency control.
+   */
+  select __schema__.stream.id_internal
+    into _streamIdInternal
+  from __schema__.stream
+  where __schema__.stream.id = _streamId;
+
+  if _expectedVersion = -1 then
+    return -9; /* Wrong expected version */
+  elsif _expectedVersion >= 0 then
+    if _streamIdInternal is null then
+      return -9;
+    end if;
+
+    select __schema__.message.stream_version 
+      into _latestStreamVersion
+    from __schema__.message
+    where __schema__.message.stream_id_internal = _streamIdInternal
+    order by __schema__.message.position desc
+    limit 1;
+
+    if _latestStreamVersion != _expectedVersion then
+      return -9;
+    end if;
+  end if;
+
+  /**
+   * Now that we've gotten that over with, delete the messages
+   * and the stream.
+   */
+  delete from __schema__.message
+  where __schema__.message.stream_id_internal = _streamIdInternal;
+
+  delete from __schema__.stream
+  where __schema__.stream.id_internal = _streamIdInternal;
+
+  get diagnostics _affected = ROW_COUNT;
+
+  if _affected > 0 then
+    perform __schema__.append_to_stream(
+      _deletedStreamId,
+      -2,
+      null,
+      _createdAt,
+      ARRAY [_deletedStreamMessage]
+    );
+  end if;
+
+  return 0;
+end
+$$ language plpgsql;
 `
 
 /**

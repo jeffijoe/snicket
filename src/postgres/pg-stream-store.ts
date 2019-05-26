@@ -1,4 +1,4 @@
-import { retry } from 'fejl'
+import { retry, RetryOptions } from 'fejl'
 import BigInteger from 'big-integer'
 import {
   StreamStore,
@@ -33,8 +33,9 @@ import {
   StreamMessage,
   MessagePosition,
   Position,
-  STREAM_METADATA_TYPE,
-  DELETED_STREAM
+  OperationalMessageType,
+  OperationalStream,
+  StreamDeleted
 } from '../types/messages'
 import { PgStreamStoreConfig } from './types/config'
 import { createPostgresPool, runInTransaction } from './connection'
@@ -86,6 +87,13 @@ export function createPostgresStreamStore(
   let disposing = false
   const writeLatch = createDuplexLatch()
 
+  const retryOpts: RetryOptions = {
+    factor: 1.05,
+    tries: 200,
+    minTimeout: 0,
+    maxTimeout: 50
+  }
+
   const store: StreamStore = {
     appendToStream,
     readHeadPosition,
@@ -117,6 +125,7 @@ export function createPostgresStreamStore(
     newMessages: NewStreamMessage[]
   ): Promise<AppendToStreamResult> {
     invariant.requiredString('streamId', streamId)
+    invariant.notOperationalStream('streamId', streamId)
     invariant.required('expectedVersion', expectedVersion)
     invariant.required('newMessages', newMessages)
     newMessages.forEach((m, i) => {
@@ -144,19 +153,7 @@ export function createPostgresStreamStore(
           maxCount: max_count
         }
       } catch (error) {
-        if (isConcurrencyUniqueConstraintViolation(error)) {
-          // tslint:disable-next-line:no-ex-assign
-          error = new ConcurrencyError()
-          /* istanbul ignore else */
-          if (expectedVersion === ExpectedVersion.Any) {
-            throw again(error)
-          }
-        } else if (isDuplicateMessageIdUniqueConstraintViolation(error)) {
-          throw new DuplicateMessageError(
-            extractUuidKeyFromConstraintViolationError(error)
-          )
-        }
-        throw error
+        throw handlePotentialConcurrencyError(error, expectedVersion, again)
       }
     }
 
@@ -170,12 +167,7 @@ export function createPostgresStreamStore(
     try {
       const { streamPosition, streamVersion, maxAge, maxCount } = await retry(
         retryableAppendToStream,
-        {
-          factor: 1.05,
-          tries: 200,
-          minTimeout: 0,
-          maxTimeout: 50
-        }
+        retryOpts
       )
 
       const scavengePromise = maybeScavenge(streamId, maxAge, maxCount)
@@ -357,6 +349,7 @@ export function createPostgresStreamStore(
   async function getStreamMetadata(
     streamId: string
   ): Promise<StreamMetadataResult> {
+    invariant.requiredString('streamId', streamId)
     const result = await readStream(
       toMetadataStreamId(streamId),
       Position.End,
@@ -391,6 +384,9 @@ export function createPostgresStreamStore(
     expectedVersion: StreamVersion | ExpectedVersion,
     opts: SetStreamMetadataOptions
   ): Promise<SetStreamMetadataResult> {
+    invariant.requiredString('streamId', streamId)
+    invariant.required('expectedVersion', expectedVersion)
+    invariant.required('opts', opts)
     const metaStreamId = toMetadataStreamId(streamId)
     writeLatch.enter()
     try {
@@ -412,7 +408,7 @@ export function createPostgresStreamStore(
               {
                 data,
                 messageId: v4(),
-                type: STREAM_METADATA_TYPE
+                type: OperationalMessageType.Metadata
               }
             )
           )
@@ -436,18 +432,35 @@ export function createPostgresStreamStore(
     streamId: string,
     expectedVersion: ExpectedVersion
   ): Promise<void> {
+    invariant.requiredString('streamId', streamId)
+    invariant.notOperationalStream('streamId', streamId)
+    invariant.required('expectedVersion', expectedVersion)
     writeLatch.enter()
     try {
-      await runInTransaction(pool, trx =>
-        trx.query(
-          scripts.deleteStream(
-            streamId,
-            DELETED_STREAM,
-            expectedVersion,
-            getCurrentTime()
-          )
-        )
-      )
+      const retryableDeleteStream = async (again: Function) => {
+        try {
+          const result = await runInTransaction(pool, trx =>
+            trx.query(
+              scripts.deleteStream(
+                streamId,
+                OperationalStream.Deleted,
+                expectedVersion,
+                getCurrentTime(),
+                {
+                  type: OperationalMessageType.StreamDeleted,
+                  messageId: v4(),
+                  data: createStreamDeletedPayload(streamId)
+                }
+              )
+            )
+          ).then(r => r.rows[0].delete_stream)
+          throwIfErrorCode(result)
+        } catch (error) {
+          throw handlePotentialConcurrencyError(error, expectedVersion, again)
+        }
+      }
+
+      return retry(retryableDeleteStream, retryOpts)
     } finally {
       writeLatch.exit()
     }
@@ -680,6 +693,35 @@ export function createPostgresStreamStore(
 }
 
 /**
+ * Inspects a thrown error and determines whether to run again.
+ * Result should be thrown.
+ * @param error
+ * @param expectedVersion
+ * @param again
+ */
+function handlePotentialConcurrencyError(
+  error: any,
+  expectedVersion: number,
+  again: Function
+) {
+  if (isConcurrencyUniqueConstraintViolation(error)) {
+    /* istanbul ignore else */
+    if (expectedVersion === ExpectedVersion.Any) {
+      return again(error)
+    }
+
+    // tslint:disable-next-line:no-ex-assign
+    error = new ConcurrencyError()
+  } else if (isDuplicateMessageIdUniqueConstraintViolation(error)) {
+    return new DuplicateMessageError(
+      extractUuidKeyFromConstraintViolationError(error)
+    )
+  }
+
+  return error
+}
+
+/**
  * Throws if the specified version is an error code.
  */
 function throwIfErrorCode(version: number) {
@@ -771,6 +813,14 @@ function extractUuidKeyFromConstraintViolationError(err: any): string {
   return result.length > 1
     ? result[1]
     : /* istanbul ignore next */ '[unable to parse]'
+}
+
+/**
+ * Creates the necessary payload for a StreamDeleted message.
+ * @param streamId
+ */
+function createStreamDeletedPayload(streamId: string): StreamDeleted {
+  return { streamId }
 }
 
 /**
