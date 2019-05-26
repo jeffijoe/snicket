@@ -166,9 +166,7 @@ create or replace function __schema__.read_stream_info(
 ) returns table (
   id text,
   stream_version int,
-  "position" bigint,
-  max_age integer,
-  max_count integer
+  "position" bigint
 )
 as $$
 begin
@@ -176,9 +174,7 @@ begin
   select
     __schema__.stream.id,
     __schema__.stream.version as stream_version,
-    __schema__.stream.position,
-    __schema__.stream.max_age,
-    __schema__.stream.max_count
+    __schema__.stream.position
   from __schema__.stream
   where __schema__.stream.id = _streamId
   limit 1;
@@ -340,7 +336,7 @@ begin
   update __schema__.stream
   set "max_age" = NULLIF(_maxAge, 0),
       "max_count" = NULLIF(_maxCount, 0)
-  where id = _metadataStreamId;
+  where id = _streamId;
 
   return _currentVersion;  
 end
@@ -350,21 +346,14 @@ $$ language plpgsql;
  * Deletes messages in a stream.
  */
 create or replace function __schema__.delete_messages(
-  _streamId text,
   _messageIds uuid []
 ) returns int as $$
 declare
-  _streamIdInternal int;
   _deletedCount int;
 begin
-  select __schema__.stream.id_internal
-    into _streamIdInternal
-  from __schema__.stream
-  where __schema__.stream.id = _streamId;
 
   delete from __schema__.message
-  where __schema__.message.stream_id_internal = _streamIdInternal
-    and __schema__.message.message_id = any (_messageIds);
+  where __schema__.message.message_id = any (_messageIds);
 
   return count(_messageIds);
 end
@@ -438,6 +427,56 @@ begin
   return 0;
 end
 $$ language plpgsql;
+
+/**
+ * Gets scavengable messages for a stream.
+ */
+create or replace function __schema__.get_scavengable_messages(
+  _streamId text,
+  _maxAge int,
+  _maxCount int,
+  _currentTime timestamp with time zone
+) returns table (message_id uuid)
+as $$
+declare
+  _streamIdInternal int;
+  _affected int;
+  _messageIds uuid;
+  _currentCount int;
+begin
+  if _currentTime is null then
+    _currentTime = now() at time zone 'utc';
+  end if;
+  
+  select __schema__.stream.id_internal
+    into _streamIdInternal
+  from __schema__.stream
+  where __schema__.stream.id = _streamId;
+
+  if NULLIF(_maxCount, 0) is not null then
+    return query
+    select __schema__.message.message_id as message_id
+    from __schema__.message 
+    where __schema__.message.stream_id_internal = _streamIdInternal
+    and __schema__.message.message_id not in (
+      select __schema__.message.message_id
+      from __schema__.message
+      where __schema__.message.stream_id_internal = _streamIdInternal
+      order by __schema__.message.stream_version desc
+      limit _maxCount
+    );
+  end if;
+
+  if NULLIF(_maxAge, 0) is not null then
+    return query
+    select __schema__.message.message_id as message_id
+    from __schema__.message
+    where __schema__.message.stream_id_internal = _streamIdInternal
+    and __schema__.message.created_at < (_currentTime - (_maxAge * interval '1 second'));
+  end if;
+
+end
+$$ language plpgsql;
 `
 
 /**
@@ -476,8 +515,13 @@ DROP FUNCTION IF EXISTS __schema__.set_stream_metadata(
  __schema__.new_stream_message
 ) CASCADE;
 DROP FUNCTION IF EXISTS __schema__.delete_messages(
-  text,
   uuid []
+) CASCADE;
+DROP FUNCTION IF EXISTS __schema__.get_scavengable_messages(
+  text,
+  int,
+  int,
+  timestamp with time zone
 ) CASCADE;
 DROP TYPE IF EXISTS __schema__.new_stream_message CASCADE;
 DROP SCHEMA IF EXISTS __schema__;

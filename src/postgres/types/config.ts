@@ -27,6 +27,10 @@ export interface PgStreamStoreConfig {
    */
   scavengeSynchronously?: boolean
   /**
+   * Configuration related to reading streams
+   */
+  reading?: Partial<ReadingConfig>
+  /**
    * Logger.
    */
   logger?: Logger
@@ -67,6 +71,24 @@ export interface PollingNotifierConfig {
    * The polling interval when using the polling notifier.
    */
   pollingInterval?: number
+}
+
+/**
+ * Settings related to reading streams.
+ */
+export interface ReadingConfig {
+  /**
+   * If true, will filter out expired messages
+   */
+  filterExpiredMessages: boolean
+  /**
+   * If filtering is enabled, we need to use stream metadata to figure out
+   * what messages are expired. To avoid spamming the DB with requests,
+   * we can cache the metadata.
+   *
+   * The value is in seconds and defaults to 1 minute.
+   */
+  metadataCacheTtl: number
 }
 
 /**

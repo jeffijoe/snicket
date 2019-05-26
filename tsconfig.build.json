@@ -3,7 +3,7 @@
   "include": ["src/**/*.ts"],
   "exclude": [
     "node_modules",
-    "dist",
+    "lib",
     "src/**/__tests__/*",
     "src/**/__tests__/*/*",
     "__tests__",

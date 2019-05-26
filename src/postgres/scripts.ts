@@ -80,13 +80,12 @@ export function createScripts(schema?: string) {
         fromPositionInclusive,
         forward
       ),
-    deleteMessages: (streamId: string, messageIds: Array<string>) =>
+    deleteMessages: (messageIds: Array<string>) =>
       format(
         replaceSchema(
-          'select * from __schema__.delete_messages(%L, ARRAY[%L]::uuid[])',
+          'select * from __schema__.delete_messages(ARRAY[%L]::uuid[])',
           schema
         ),
-        streamId,
         messageIds
       ),
     deleteStream: (
@@ -106,6 +105,22 @@ export function createScripts(schema?: string) {
         deletedStreamId,
         serializeDate(createdAt),
         serializeMessage(deletedStreamMessage)
+      ),
+    getScavengableMessageIds: (
+      streamId: string,
+      maxAge: number | null,
+      maxCount: number | null,
+      currentTime: Date | null
+    ) =>
+      format(
+        replaceSchema(
+          'select * from __schema__.get_scavengable_messages(%L, %L, %L, %L::timestamp with time zone)',
+          schema
+        ),
+        streamId,
+        maxAge,
+        maxCount,
+        serializeDate(currentTime)
       )
   }
 }

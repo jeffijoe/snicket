@@ -41,7 +41,7 @@ beforeEach(() => {
     readHeadPosition: readHeadPositionMock as any,
     readStream: readStreamMock as any,
     readAll: null as any,
-    getStreamMetadata: null as any,
+    readStreamMetadata: null as any,
     setStreamMetadata: null as any,
     deleteMessage: null as any,
     deleteStream: null as any,
