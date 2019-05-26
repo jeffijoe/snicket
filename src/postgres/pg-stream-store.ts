@@ -37,7 +37,7 @@ import {
   OperationalStream,
   StreamDeleted
 } from '../types/messages'
-import { PgStreamStoreConfig } from './types/config'
+import { PgStreamStoreConfig, ReadingConfig } from './types/config'
 import { createPostgresPool, runInTransaction } from './connection'
 import { createDuplexLatch } from '../utils/latch'
 import * as invariant from '../utils/invariant'
@@ -49,6 +49,10 @@ import { createAllSubscription } from '../subscriptions/all-subscription'
 import { detectGapsAndReloadAll } from '../utils/gap-detection'
 import { v4 } from 'uuid'
 import { createPostgresNotifier } from './pg-notifications-notifier'
+import { uniq } from '../utils/array-util'
+import { toMetadataStreamId, isMetaStream } from '../utils/id-util'
+import { filterExpiredMessages } from '../utils/filter-expired'
+import { createMetadataCache } from '../meta/metadata-cache'
 
 /**
  * Postgres Stream Store.
@@ -75,9 +79,21 @@ export function createPostgresStreamStore(
     type: 'poll'
   }
   const scavengeSynchronously = !!config.scavengeSynchronously
+  const readingConfig: ReadingConfig = {
+    filterExpiredMessages: false,
+    metadataCacheTtl: 60,
+    ...config.reading
+  }
+  const getCurrentTime = config.getCurrentTime || (() => null)
+  const metadataCache = readingConfig.filterExpiredMessages
+    ? createMetadataCache(
+        readStreamMetadata,
+        readingConfig.metadataCacheTtl,
+        getCurrentTime
+      )
+    : null
   const pool = createPostgresPool(config.pg)
   const scripts = createScripts(config.pg.schema)
-  const getCurrentTime = config.getCurrentTime || (() => null)
   // Keep track of subscriptions so we can dispose them when the store is disposed.
   let subscriptions: Subscription[] = []
   // Cache the notifier.
@@ -99,7 +115,7 @@ export function createPostgresStreamStore(
     readHeadPosition,
     readAll,
     readStream,
-    getStreamMetadata,
+    readStreamMetadata,
     setStreamMetadata,
     subscribeToStream,
     subscribeToAll,
@@ -235,8 +251,6 @@ export function createPostgresStreamStore(
         streamId: streamId,
         streamPosition: '0',
         streamVersion: 0,
-        maxAge: 0,
-        maxCount: 0,
         isEnd: true,
         messages: []
       }
@@ -250,7 +264,18 @@ export function createPostgresStreamStore(
       isEnd = false
     }
 
-    return mapReadStreamResult(messages, streamInfo, isEnd, forward)
+    const streamResult = mapReadStreamResult(
+      messages,
+      streamInfo,
+      isEnd,
+      forward
+    )
+
+    const filtered = await maybeFilterExpiredMessages(streamResult.messages)
+    return {
+      ...streamResult,
+      messages: filtered
+    }
   }
 
   /**
@@ -338,7 +363,7 @@ export function createPostgresStreamStore(
     return {
       isEnd,
       nextPosition,
-      messages
+      messages: await maybeFilterExpiredMessages(messages)
     }
   }
 
@@ -346,7 +371,7 @@ export function createPostgresStreamStore(
    * Gets stream metadata.
    * @param streamId
    */
-  async function getStreamMetadata(
+  async function readStreamMetadata(
     streamId: string
   ): Promise<StreamMetadataResult> {
     invariant.requiredString('streamId', streamId)
@@ -473,10 +498,10 @@ export function createPostgresStreamStore(
    * @param messageId
    */
   async function deleteMessage(
-    streamId: string,
+    _streamId: string,
     messageId: string
   ): Promise<void> {
-    return deleteMessages(streamId, [messageId])
+    return deleteMessages([messageId])
   }
 
   /**
@@ -485,20 +510,13 @@ export function createPostgresStreamStore(
    * @param streamId
    * @param expectedVersion
    */
-  async function deleteMessages(
-    streamId: string,
-    messageIds: Array<string>
-  ): Promise<void> {
+  async function deleteMessages(messageIds: Array<string>): Promise<void> {
     writeLatch.enter()
     try {
       await runInTransaction(pool, trx =>
-        trx.query(scripts.deleteMessages(streamId, messageIds))
+        trx.query(scripts.deleteMessages(messageIds))
       )
-      logger.trace(
-        `pg-stream-store: deleted ${
-          messageIds.length
-        } messages from stream ${streamId}`
-      )
+      logger.trace(`pg-stream-store: deleted ${messageIds.length} messages`)
     } finally {
       writeLatch.exit()
     }
@@ -597,6 +615,21 @@ export function createPostgresStreamStore(
   }
 
   /**
+   * Purges expired messages.
+   * @param messages
+   */
+  function purgeExpiredMessages(messages: Array<StreamMessage>) {
+    if (messages.length === 0) {
+      return
+    }
+    writeLatch.enter()
+    // We don't await this.
+    deleteMessages(messages.map(m => m.messageId))
+      .then(writeLatch.exit)
+      .catch(writeLatch.exit)
+  }
+
+  /**
    * Creates a subscription disposer.
    *
    * @param opts
@@ -649,26 +682,51 @@ export function createPostgresStreamStore(
     maxAge: number | null,
     maxCount: number | null
   ): Promise<void> {
-    // TODO: Implement
+    if (!maxAge && !maxCount) {
+      return
+    }
+
+    writeLatch.enter()
     try {
-      if (streamId.startsWith('$')) {
+      /* istanbul ignore next: meta streams should never reach this point, but just to be safe */
+      if (isMetaStream(streamId)) {
         return
       }
 
-      // await runInTransaction(pool, trx => {
-      //   return trx
-      //     .query(
-      //       scripts.append(
-      //         streamId,
-      //         toMetadataStreamId(streamId),
-      //         expectedVersion,
-      //         newMessages
-      //       )
-      //     )
-      //     .then(x => x.rows[0])
-      // })
+      const result = await runInTransaction(pool, trx => {
+        return trx
+          .query(
+            scripts.getScavengableMessageIds(
+              streamId,
+              maxAge,
+              maxCount,
+              getCurrentTime()
+            )
+          )
+          .then(x => x.rows.map(m => m.message_id))
+          .then(uniq)
+      })
+
+      if (result.length === 0) {
+        return
+      }
+
+      logger.trace(
+        `pg-stream-store:scavenge: found ${
+          result.length
+        } messages in stream ${streamId} to scavenge; deleting...`
+      )
+      await deleteMessages(result)
+      logger.trace(
+        `pg-stream-store:scavenge: deleted ${
+          result.length
+        } messages from stream ${streamId} during scavenge.`
+      )
     } catch (err) {
+      /* istanbul ignore next */
       logger.error('pg-stream-store:scavenge: error while scavenging', err)
+    } finally {
+      writeLatch.exit()
     }
   }
 
@@ -689,6 +747,35 @@ export function createPostgresStreamStore(
           )
     logger.trace(`pg-stream-store: initialized ${notifierConfig.type} notifier`)
     return notifier
+  }
+
+  /**
+   * Filters and purges expired messages if enabled.
+   *
+   * @param messages
+   */
+  async function maybeFilterExpiredMessages(
+    messages: Array<StreamMessage>
+  ): Promise<Array<StreamMessage>> {
+    if (!metadataCache) {
+      return messages
+    }
+    const messageTuples = await Promise.all(
+      messages.map(async message => {
+        return {
+          message,
+          maxAge: await metadataCache
+            .readStreamMetadata(message.streamId)
+            .then(m => m.maxAge)
+        }
+      })
+    )
+    const { valid, expired } = filterExpiredMessages(
+      messageTuples,
+      getCurrentTime
+    )
+    purgeExpiredMessages(expired)
+    return valid
   }
 }
 
@@ -748,8 +835,6 @@ function mapReadStreamResult(
     streamId: streamInfo.id,
     streamVersion: streamInfo.stream_version,
     streamPosition: streamInfo.position,
-    maxAge: streamInfo.max_age || null,
-    maxCount: streamInfo.max_count || null,
     streamType: streamInfo.stream_type,
     nextVersion: forward
       ? (lastMessage
@@ -838,19 +923,4 @@ interface InsertResult {
  */
 enum AppendResultCodes {
   ConcurrencyIssue = -9
-}
-
-/**
- * Converts a stream ID to a metadata stream ID.
- * @param streamId
- */
-function toMetadataStreamId(streamId: string) {
-  return `$$${streamId}`
-}
-
-/**
- * Determines if the specified stream ID is a meta stream.
- */
-function isMetaStream(streamId: string) {
-  return streamId.startsWith('$')
 }

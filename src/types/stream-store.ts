@@ -18,6 +18,11 @@ import {
  */
 export interface StreamStore {
   /**
+   * Read the head position (the newest message's position).
+   */
+  readHeadPosition(): Promise<string>
+
+  /**
    * Reads a stream at the specified `fromVersionInclusive` - use `0` to start at the beginning.
    * Returns a descriptor of the stream as well as the messages.
    *
@@ -31,11 +36,6 @@ export interface StreamStore {
     count: number,
     direction?: ReadDirection
   ): Promise<ReadStreamResult>
-
-  /**
-   * Read the head position (the newest message's position).
-   */
-  readHeadPosition(): Promise<string>
 
   /**
    * Reads all messages from all streams.
@@ -54,7 +54,7 @@ export interface StreamStore {
    * Gets the stream's metadata.
    * @param streamId
    */
-  getStreamMetadata(streamId: string): Promise<StreamMetadataResult>
+  readStreamMetadata(streamId: string): Promise<StreamMetadataResult>
 
   /**
    * Sets the stream's metadata.
@@ -139,8 +139,6 @@ export interface ReadStreamResult {
   streamVersion: StreamVersion
   streamPosition: MessagePosition
   nextVersion: StreamVersion
-  maxCount: number | null
-  maxAge: number | null
   isEnd: boolean
   messages: StreamMessage[]
 }
@@ -172,7 +170,7 @@ export interface StreamMetadataResult {
    */
   metadataStreamVersion: StreamVersion
   /**
-   * The max age of messages allowed in the stream.
+   * The max age of messages allowed in the stream, in seconds.
    */
   maxAge: number | null
   /**
@@ -218,7 +216,7 @@ export interface SetStreamMetadataOptions {
  */
 export interface SetStreamMetadataResult {
   /**
-   * Current version of the stream at the time the metadata was written.
+   * Current version of the metadata stream at the time the metadata was written.
    */
   currentVersion: StreamVersion
 }

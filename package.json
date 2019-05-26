@@ -19,9 +19,11 @@
   "dependencies": {
     "big-integer": "^1.6.43",
     "fejl": "^2.3.0",
-    "pg": "^7.11.0",
     "pg-format": "^1.0.4",
     "uuid-validate": "^0.0.3"
+  },
+  "peerDependencies": {
+    "pg": "^7.11.0"
   },
   "devDependencies": {
     "@types/jest": "^24.0.13",
@@ -42,6 +44,7 @@
     "jest": "^24.8.0",
     "lint-staged": "^8.1.7",
     "lodash": "^4.17.11",
+    "ms": "^2.1.1",
     "prettier": "^1.17.1",
     "rimraf": "^2.6.3",
     "smid": "^0.1.1",

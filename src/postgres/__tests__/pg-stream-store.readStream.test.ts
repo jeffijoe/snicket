@@ -34,7 +34,7 @@ describe('reading a stream', () => {
       messages: expect.arrayContaining([
         expect.objectContaining({
           streamId: streamId,
-          data: { hello: 'world' },
+          data: { hello: 'world', index: 0 },
           meta: { me: 'ta' },
           createdAt: expect.any(Date),
           type: 'greeting',

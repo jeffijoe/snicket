@@ -1,23 +1,57 @@
-import { ExpectedVersion, ReadDirection } from '../../types/stream-store'
+import {
+  ExpectedVersion,
+  ReadDirection,
+  StreamStore
+} from '../../types/stream-store'
 import { createPostgresStreamStore } from '../pg-stream-store'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 import { v4 } from 'uuid'
 import { generateMessages } from './__helpers__/message-helper'
 import { OperationalStream, StreamDeleted } from '../../types/messages'
-import { SubscribeAt } from '../../types/subscriptions'
 import { ConcurrencyError } from '../../errors/errors'
+import { PgStreamStoreConfig } from '../types/config'
+import { createPostgresStreamStoreBootstrapper } from '../setup/setup'
+import {
+  waitForStreamSubscription,
+  waitForAllSubscription
+} from '../../__helpers__/wait-helper'
 
-const store = createPostgresStreamStore({
+const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
+  pg: {
+    ...streamStoreCfg.pg,
+    database: 'delete_stream_test'
+  },
   notifierConfig: {
     type: 'pg-notify'
   }
+}
+
+const bootstrapper = createPostgresStreamStoreBootstrapper(cfg)
+let store: StreamStore
+beforeAll(async () => {
+  await bootstrapper.bootstrap()
+  store = createPostgresStreamStore(cfg)
 })
-afterAll(() => store.dispose())
+
+afterAll(() => store.dispose().then(bootstrapper.teardown))
 
 test('deletes a stream', async () => {
   const streamId = v4()
   const messages = generateMessages(5)
+  const subscriptionPromises = [
+    waitForStreamSubscription(
+      store,
+      OperationalStream.Deleted,
+      msg => (msg.data as StreamDeleted).streamId === streamId
+    ),
+
+    waitForAllSubscription(
+      store,
+      msg => (msg.data as StreamDeleted).streamId === streamId
+    )
+  ]
+
   const result = await store.appendToStream(
     streamId,
     ExpectedVersion.Empty,
@@ -40,34 +74,7 @@ test('deletes a stream', async () => {
     )
   ).toBeTruthy()
 
-  await new Promise(async (resolve, reject) => {
-    const sub = await store.subscribeToStream(
-      OperationalStream.Deleted,
-      async msg => {
-        if ((msg.data as StreamDeleted).streamId === streamId) {
-          sub.dispose().then(() => resolve(), reject)
-        }
-      },
-      {
-        afterVersion: SubscribeAt.Beginning,
-        maxCountPerRead: 500
-      }
-    )
-  })
-
-  await new Promise(async (resolve, reject) => {
-    const sub = await store.subscribeToAll(
-      async msg => {
-        if ((msg.data as StreamDeleted).streamId === streamId) {
-          sub.dispose().then(() => resolve(), reject)
-        }
-      },
-      {
-        afterPosition: SubscribeAt.Beginning,
-        maxCountPerRead: 500
-      }
-    )
-  })
+  await Promise.all(subscriptionPromises)
 })
 
 test('detects concurrency issues', async () => {
