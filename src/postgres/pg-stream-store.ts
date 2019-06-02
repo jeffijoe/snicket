@@ -338,7 +338,7 @@ export function createPostgresStreamStore(
           forward
         )
       )
-      .then(r => [...r.rows].map((m: any) => mapMessageResult(m)))
+      .then((r: any) => [...r.rows].map((m: any) => mapMessageResult(m)))
 
     if (messages.length === 0) {
       return {

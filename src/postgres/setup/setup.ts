@@ -21,6 +21,11 @@ export function createPostgresStreamStoreBootstrapper(
      * Bootstraps the Stream Store database.
      */
     bootstrap() {
+      logger.trace(
+        `Bootstrapping a StreamSource database in ${
+          config.pg.database
+        } with schema name ${config.pg.schema}`
+      )
       return dropDatabaseIfTest()
         .then(() => createDbIfNotExist())
         .then(() => setupPostgresSchema())
@@ -55,8 +60,12 @@ export function createPostgresStreamStoreBootstrapper(
       database: 'postgres'
     })
     try {
+      logger.trace(
+        `Attempting to create the database if it doesn't already exist.`
+      )
       await pool
         .query(format(`CREATE DATABASE %I`, db))
+        .then(() => logger.trace('Database created.'))
         .catch(ignoreErrorIfExists)
     } finally {
       await pool.end()
@@ -67,6 +76,7 @@ export function createPostgresStreamStoreBootstrapper(
    * Sets up the Postgres schema.
    */
   async function setupPostgresSchema() {
+    logger.trace('Setting up the tables, indexes and types.')
     const pool = createPostgresPool(config.pg)
     try {
       await runInTransaction(pool, trx => {
@@ -84,7 +94,11 @@ export function createPostgresStreamStoreBootstrapper(
   /* istanbul ignore next */
   async function dropDatabaseIfTest() {
     const db = config.pg.database
-    if (!config.pg.dropIfTest || db.endsWith('_test') === false) {
+    if (
+      !config.pg.dropIfTest ||
+      !db.endsWith('_test') ||
+      process.env.NODE_ENV !== 'test'
+    ) {
       return
     }
 
@@ -121,6 +135,7 @@ export function createPostgresStreamStoreBootstrapper(
    */
   async function dropPostgresSchema() {
     const pool = createPostgresPool(config.pg)
+    logger.trace('Dropping the tables, indexes and types.')
     try {
       await runInTransaction(pool, trx => {
         const sql = replaceSchema(schemaV1.TEARDOWN_SQL)

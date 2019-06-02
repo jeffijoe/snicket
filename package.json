@@ -1,14 +1,18 @@
 {
-  "name": "streamstore",
+  "name": "streamsource",
   "version": "0.0.0",
-  "description": "Stream Store implementation for Node.",
+  "description": "Stream Store implementation for Node.JS.",
   "author": "Jeff Hansen",
   "license": "MIT",
   "files": [
     "lib",
+    "bin",
     "LICENSE.md",
     "README.md"
   ],
+  "bin": {
+    "streamsource-pg": "./bin/streamsource-pg"
+  },
   "scripts": {
     "build": "rimraf dist/ && tsc -p tsconfig.build.json",
     "test": "NODE_ENV=test npm run setup-db && NODE_ENV=test jest",
@@ -45,6 +49,7 @@
     "lint-staged": "^8.1.7",
     "lodash": "^4.17.11",
     "ms": "^2.1.1",
+    "pg": "^7.11.0",
     "prettier": "^1.17.1",
     "rimraf": "^2.6.3",
     "smid": "^0.1.1",
@@ -56,8 +61,7 @@
     "tslint-consistent-codestyle": "^1.15.1",
     "type-zoo": "^3.3.0",
     "typescript": "^3.4.5",
-    "uuid": "^3.3.2",
-    "yenv": "^2.1.0"
+    "uuid": "^3.3.2"
   },
   "prettier": {
     "singleQuote": true,

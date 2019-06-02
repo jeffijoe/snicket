@@ -534,5 +534,4 @@ DROP FUNCTION IF EXISTS __schema__.get_scavengable_stream_messages(
   timestamp with time zone
 ) CASCADE;
 DROP TYPE IF EXISTS __schema__.new_stream_message CASCADE;
-DROP SCHEMA IF EXISTS __schema__;
 `

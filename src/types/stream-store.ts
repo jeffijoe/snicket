@@ -143,6 +143,9 @@ export interface ReadStreamResult {
   messages: StreamMessage[]
 }
 
+/**
+ * The result from calling `readAll`.
+ */
 export interface ReadAllResult {
   isEnd: boolean
   nextPosition: MessagePosition
@@ -199,8 +202,7 @@ export interface SetStreamMetadataOptions {
   maxAge?: number | null
   /**
    * The max amount of messages allowed in the stream.
-   * When appending to a stream with `maxCount` set, it will purge extraneous messages
-   * before returning.
+   * When appending to a stream with `maxCount` set, it will purge extraneous messages.
    *
    * `0` (or `undefined`) is the same as `null` (disabled)
    */
