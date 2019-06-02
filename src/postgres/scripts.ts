@@ -106,20 +106,22 @@ export function createScripts(schema?: string) {
         serializeDate(createdAt),
         serializeMessage(deletedStreamMessage)
       ),
-    getScavengableMessageIds: (
+    getScavengableStreamMessageIds: (
       streamId: string,
       maxAge: number | null,
       maxCount: number | null,
+      truncateBefore: number | null,
       currentTime: Date | null
     ) =>
       format(
         replaceSchema(
-          'select * from __schema__.get_scavengable_messages(%L, %L, %L, %L::timestamp with time zone)',
+          'select * from __schema__.get_scavengable_stream_messages(%L, %L, %L, %L, %L::timestamp with time zone)',
           schema
         ),
         streamId,
         maxAge,
         maxCount,
+        truncateBefore,
         serializeDate(currentTime)
       )
   }

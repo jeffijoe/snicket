@@ -158,7 +158,8 @@ export function createPostgresStreamStore(
           current_version,
           current_position,
           max_age,
-          max_count
+          max_count,
+          truncate_before
         } = await insertMessages(streamId, expectedVersion, newMessages)
 
         throwIfErrorCode(current_version)
@@ -166,7 +167,8 @@ export function createPostgresStreamStore(
           streamPosition: current_position,
           streamVersion: current_version,
           maxAge: max_age,
-          maxCount: max_count
+          maxCount: max_count,
+          truncateBefore: truncate_before
         }
       } catch (error) {
         throw handlePotentialConcurrencyError(error, expectedVersion, again)
@@ -181,12 +183,20 @@ export function createPostgresStreamStore(
 
     writeLatch.enter()
     try {
-      const { streamPosition, streamVersion, maxAge, maxCount } = await retry(
-        retryableAppendToStream,
-        retryOpts
-      )
+      const {
+        streamPosition,
+        streamVersion,
+        maxAge,
+        maxCount,
+        truncateBefore
+      } = await retry(retryableAppendToStream, retryOpts)
 
-      const scavengePromise = maybeScavenge(streamId, maxAge, maxCount)
+      const scavengePromise = maybeScavenge(
+        streamId,
+        maxAge,
+        maxCount,
+        truncateBefore
+      )
       if (scavengeSynchronously || disposing) {
         await scavengePromise
       }
@@ -418,7 +428,9 @@ export function createPostgresStreamStore(
       const data = {
         metadata: opts.metadata || {},
         maxAge: opts.maxAge || null,
-        maxCount: opts.maxCount || null
+        maxCount: opts.maxCount || null,
+        truncateBefore:
+          typeof opts.truncateBefore === 'number' ? opts.truncateBefore : null
       }
       const result = await runInTransaction(pool, trx => {
         return trx
@@ -440,7 +452,12 @@ export function createPostgresStreamStore(
           .then(x => x.rows[0])
       })
       throwIfErrorCode(result.current_version)
-      await maybeScavenge(streamId, data.maxAge, data.maxCount)
+      await maybeScavenge(
+        streamId,
+        data.maxAge,
+        data.maxCount,
+        data.truncateBefore
+      )
       return { currentVersion: result.current_version }
     } finally {
       writeLatch.exit()
@@ -630,7 +647,7 @@ export function createPostgresStreamStore(
   }
 
   /**
-   * Creates a subscription disposer.
+   * Calls the subscription disposer if one has been specified.
    *
    * @param opts
    * @param subscription
@@ -669,20 +686,22 @@ export function createPostgresStreamStore(
   }
 
   /**
-   * Scavenges the stream if the max age and count say so.
+   * Scavenges the stream if the max age, max count count or truncate before say so.
    * The options passed in to the stream store determine whether it happens sync (after append finishes but before returning)
    * or async (in the background).
    *
    * @param streamId
    * @param maxAge
    * @param maxCount
+   * @param truncateBefore
    */
   async function maybeScavenge(
     streamId: string,
     maxAge: number | null,
-    maxCount: number | null
+    maxCount: number | null,
+    truncateBefore: number | null
   ): Promise<void> {
-    if (!maxAge && !maxCount) {
+    if (!maxAge && !maxCount && typeof truncateBefore !== 'number') {
       return
     }
 
@@ -696,10 +715,11 @@ export function createPostgresStreamStore(
       const result = await runInTransaction(pool, trx => {
         return trx
           .query(
-            scripts.getScavengableMessageIds(
+            scripts.getScavengableStreamMessageIds(
               streamId,
               maxAge,
               maxCount,
+              truncateBefore,
               getCurrentTime()
             )
           )
@@ -916,6 +936,7 @@ interface InsertResult {
   current_position: string
   max_count: number | null
   max_age: number | null
+  truncate_before: number | null
 }
 
 /**
