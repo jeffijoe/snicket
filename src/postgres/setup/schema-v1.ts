@@ -11,12 +11,12 @@ CREATE SCHEMA IF NOT EXISTS __schema__;
  * Stream table. We use internal IDs as a perf boost for joining.
  */
 CREATE TABLE IF NOT EXISTS __schema__.stream (
-    id text NOT NULL UNIQUE,
-    id_internal bigserial PRIMARY KEY,
-    version integer NOT NULL DEFAULT '-1'::integer,
-    position bigint NOT NULL DEFAULT '-1'::bigint,
-    max_age integer DEFAULT NULL,
-    max_count integer DEFAULT NULL
+  id text NOT NULL UNIQUE,
+  id_internal bigserial PRIMARY KEY,
+  version integer NOT NULL DEFAULT '-1'::integer,
+  position bigint NOT NULL DEFAULT '-1'::bigint,
+  max_age integer DEFAULT NULL,
+  max_count integer DEFAULT NULL
 );
 
 /**
@@ -30,17 +30,17 @@ CREATE SEQUENCE IF NOT EXISTS __schema__.message_seq
  * Messages table.
  */
 CREATE TABLE IF NOT EXISTS __schema__.message (
-    stream_id_internal bigint NOT NULL REFERENCES __schema__.stream(id_internal),
-    message_id uuid NOT NULL UNIQUE,
-    stream_version integer NOT NULL,
-    position bigint NOT NULL PRIMARY KEY DEFAULT nextval('__schema__.message_seq'),
-    created_at timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc'),
-    type text NOT NULL,
-    data jsonb NOT NULL,
-    meta jsonb NOT NULL DEFAULT '{}',
+  stream_id_internal bigint NOT NULL REFERENCES __schema__.stream(id_internal),
+  message_id uuid NOT NULL UNIQUE,
+  stream_version integer NOT NULL,
+  position bigint NOT NULL PRIMARY KEY DEFAULT nextval('__schema__.message_seq'),
+  created_at timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc'),
+  type text NOT NULL,
+  data jsonb NOT NULL,
+  meta jsonb NOT NULL DEFAULT '{}',
 
-    CONSTRAINT message_stream_id_internal_stream_version_unique UNIQUE (stream_id_internal, stream_version),
-    CONSTRAINT message_stream_id_internal_message_id_unique UNIQUE (stream_id_internal, message_id)
+  CONSTRAINT message_stream_id_internal_stream_version_unique UNIQUE (stream_id_internal, stream_version),
+  CONSTRAINT message_stream_id_internal_message_id_unique UNIQUE (stream_id_internal, message_id)
 );
 ALTER SEQUENCE __schema__.message_seq
 OWNED BY __schema__.message.position;
@@ -431,10 +431,11 @@ $$ language plpgsql;
 /**
  * Gets scavengable messages for a stream.
  */
-create or replace function __schema__.get_scavengable_messages(
+create or replace function __schema__.get_scavengable_stream_messages(
   _streamId text,
   _maxAge int,
   _maxCount int,
+  _truncateBefore int,
   _currentTime timestamp with time zone
 ) returns table (message_id uuid)
 as $$
@@ -473,6 +474,14 @@ begin
     from __schema__.message
     where __schema__.message.stream_id_internal = _streamIdInternal
     and __schema__.message.created_at < (_currentTime - (_maxAge * interval '1 second'));
+  end if;
+
+  if _truncateBefore is not null then
+    return query
+    select __schema__.message.message_id as message_id
+    from __schema__.message
+    where __schema__.message.stream_id_internal = _streamIdInternal
+    and __schema__.message.stream_version <= _truncateBefore;
   end if;
 
 end
@@ -517,8 +526,9 @@ DROP FUNCTION IF EXISTS __schema__.set_stream_metadata(
 DROP FUNCTION IF EXISTS __schema__.delete_messages(
   uuid []
 ) CASCADE;
-DROP FUNCTION IF EXISTS __schema__.get_scavengable_messages(
+DROP FUNCTION IF EXISTS __schema__.get_scavengable_stream_messages(
   text,
+  int,
   int,
   int,
   timestamp with time zone

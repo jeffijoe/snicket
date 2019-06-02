@@ -194,7 +194,7 @@ export interface SetStreamMetadataOptions {
    * The amount of time (in seconds) that messages in the stream are valid for.
    * Messages older than this won't be returned, and become eligible for scavenging.
    *
-   * `0` is the same as `null` (not enabled)
+   * `0` (or `undefined`) is the same as `null` (disabled)
    */
   maxAge?: number | null
   /**
@@ -202,9 +202,15 @@ export interface SetStreamMetadataOptions {
    * When appending to a stream with `maxCount` set, it will purge extraneous messages
    * before returning.
    *
-   * `0` is the same as `null` (not enabled)
+   * `0` (or `undefined`) is the same as `null` (disabled)
    */
   maxCount?: number | null
+  /**
+   * Messages with a version older than or equal to this will become eligible for scavenging.
+   *
+   * `null` (or `undefined`) means disabled.
+   */
+  truncateBefore?: number | null
   /**
    * The stream custom metadata to set.
    */
