@@ -56,7 +56,7 @@ export interface SubscriptionOptions {
    */
   maxCountPerRead?: number
   /**
-   * A callback that is invoked with `caughtUp: true` when the subscription has caught up with the all-stream
+   * A callback that is invoked with `caughtUp: true` when the subscription has caught up with the stream
    * (when the underlying read has isEnd=true) and when it falls behind (when the underlying page read
    * has isEnd=false).
    *

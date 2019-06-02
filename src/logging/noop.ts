@@ -10,6 +10,7 @@ const noop = () => {}
 export const noopLogger: Logger = {
   trace: noop,
   debug: noop,
+  info: noop,
   error: noop,
   warn: noop
 }

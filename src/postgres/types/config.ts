@@ -69,6 +69,7 @@ export interface PollingNotifierConfig {
   type: 'poll'
   /**
    * The polling interval when using the polling notifier.
+   * Default is 500 (0.5 seconds)
    */
   pollingInterval?: number
 }
@@ -98,7 +99,7 @@ export interface DatabaseConnectionOptions {
   schema?: string
   dropIfTest?: boolean
   host: string
-  port: number
+  port: string | number
   user: string
   password: string
   database: string

@@ -1,10 +1,18 @@
 import { Logger, LogLevel } from '../types/logger'
 import { assert } from '../utils/invariant'
 
-const levels: Array<LogLevel> = ['trace', 'debug', 'warn', 'error', 'off']
+const levels: Array<LogLevel> = [
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'off'
+]
 const emojis: Record<LogLevel, string> = {
   trace: '🕵️‍ ',
   debug: '🐞',
+  info: 'ℹ️ ',
   warn: '⚠️ ',
   error: '🚨',
   off: ''
@@ -28,6 +36,7 @@ export function createConsoleLogger(
   return {
     trace: makeLogMethod('trace'),
     debug: makeLogMethod('debug'),
+    info: makeLogMethod('info'),
     warn: makeLogMethod('warn'),
     error: makeLogMethod('error')
   }
@@ -38,8 +47,7 @@ export function createConsoleLogger(
       return (...args: any[]) => {
         con.log(
           `\u001b[90m[${new Date().toISOString()}]\u001b[39m ${emoji}`,
-          ...args,
-          '\n'
+          ...args
         )
       }
     }

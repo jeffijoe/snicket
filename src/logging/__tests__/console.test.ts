@@ -14,26 +14,22 @@ test('calls the proper method', () => {
   expect(con.log).toHaveBeenCalledWith(
     expect.stringContaining('🕵️‍'),
     'Hello',
-    'world',
-    expect.anything()
+    'world'
   )
   expect(con.log).toHaveBeenCalledWith(
     expect.stringContaining('🐞'),
     'Hello',
-    'world',
-    expect.anything()
+    'world'
   )
   expect(con.log).toHaveBeenCalledWith(
     expect.stringContaining('⚠️'),
     'Hello',
-    'world',
-    expect.anything()
+    'world'
   )
   expect(con.log).toHaveBeenCalledWith(
     expect.stringContaining('🚨'),
     'Hello',
-    'world',
-    expect.anything()
+    'world'
   )
 })
 
@@ -52,8 +48,7 @@ test('respects log level', () => {
   expect(con.log).toHaveBeenCalledWith(
     expect.stringContaining('🚨'),
     'Hello',
-    'world',
-    expect.anything()
+    'world'
   )
 })
 

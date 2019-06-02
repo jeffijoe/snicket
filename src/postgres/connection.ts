@@ -18,10 +18,10 @@ export function createPostgresPool({
     password,
     database,
     host,
-    port,
     ssl,
     user,
     min: min || 0,
+    port: port as any,
     idleTimeoutMillis: 2 * 60 * 1000,
     max: max || 10
   })
