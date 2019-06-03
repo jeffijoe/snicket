@@ -1,58 +1,58 @@
-import { retry, RetryOptions } from 'fejl'
 import BigInteger from 'big-integer'
-import {
-  StreamStore,
-  ReadStreamResult,
-  AppendToStreamResult,
-  ReadAllResult,
-  ReadDirection,
-  StreamMetadataResult,
-  SetStreamMetadataResult,
-  SetStreamMetadataOptions,
-  ExpectedVersion
-} from '../types/stream-store'
+import { retry, RetryOptions } from 'fejl'
+import { v4 } from 'uuid'
 import {
   ConcurrencyError,
-  DuplicateMessageError,
   DisposedError,
+  DuplicateMessageError,
   InvalidParameterError
 } from '../errors/errors'
+import { noopLogger } from '../logging/noop'
+import { createMetadataCache } from '../meta/metadata-cache'
+import { createAllSubscription } from '../subscriptions/all-subscription'
+import { createPollingNotifier } from '../subscriptions/polling-notifier'
+import { createStreamSubscription } from '../subscriptions/stream-subscription'
 import {
-  StreamStoreNotifier,
-  MessageProcessor,
-  StreamSubscriptionOptions,
-  StreamSubscription,
-  Subscription,
-  SubscriptionOptions,
-  AllSubscriptionOptions,
-  AllSubscription
-} from '../types/subscriptions'
-import {
-  NewStreamMessage,
-  StreamVersion,
-  StreamMessage,
   MessagePosition,
-  Position,
+  NewStreamMessage,
   OperationalMessageType,
   OperationalStream,
-  StreamDeleted
+  Position,
+  StreamDeleted,
+  StreamMessage,
+  StreamVersion
 } from '../types/messages'
-import { PgStreamStoreConfig, ReadingConfig } from './types/config'
-import { createPostgresPool, runInTransaction } from './connection'
-import { createDuplexLatch } from '../utils/latch'
-import * as invariant from '../utils/invariant'
-import { createStreamSubscription } from '../subscriptions/stream-subscription'
-import { noopLogger } from '../logging/noop'
-import { createPollingNotifier } from '../subscriptions/polling-notifier'
-import { createScripts } from './scripts'
-import { createAllSubscription } from '../subscriptions/all-subscription'
-import { detectGapsAndReloadAll } from '../utils/gap-detection'
-import { v4 } from 'uuid'
-import { createPostgresNotifier } from './pg-notifications-notifier'
+import {
+  AppendToStreamResult,
+  ExpectedVersion,
+  ReadAllResult,
+  ReadDirection,
+  ReadStreamResult,
+  SetStreamMetadataOptions,
+  SetStreamMetadataResult,
+  StreamMetadataResult,
+  StreamStore
+} from '../types/stream-store'
+import {
+  AllSubscription,
+  AllSubscriptionOptions,
+  MessageProcessor,
+  StreamStoreNotifier,
+  StreamSubscription,
+  StreamSubscriptionOptions,
+  Subscription,
+  SubscriptionOptions
+} from '../types/subscriptions'
 import { uniq } from '../utils/array-util'
-import { toMetadataStreamId, isMetaStream } from '../utils/id-util'
 import { filterExpiredMessages } from '../utils/filter-expired'
-import { createMetadataCache } from '../meta/metadata-cache'
+import { detectGapsAndReloadAll } from '../utils/gap-detection'
+import { isMetaStream, toMetadataStreamId } from '../utils/id-util'
+import * as invariant from '../utils/invariant'
+import { createDuplexLatch } from '../utils/latch'
+import { createPostgresPool, runInTransaction } from './connection'
+import { createPostgresNotifier } from './pg-notifications-notifier'
+import { createScripts } from './scripts'
+import { PgStreamStoreConfig, ReadingConfig } from './types/config'
 
 /**
  * Postgres Stream Store.
@@ -75,7 +75,7 @@ export function createPostgresStreamStore(
   const gapReloadDelay =
     config.gapReloadDelay || /* istanbul ignore next */ 5000
   const gapReloadTimes = config.gapReloadTimes || /* istanbul ignore next */ 1
-  const notifierConfig = config.notifierConfig || {
+  const notifierConfig = config.notifier || {
     type: 'poll'
   }
   const scavengeSynchronously = !!config.scavengeSynchronously

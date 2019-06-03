@@ -1,0 +1,31 @@
+{
+  "name": "inventory",
+  "version": "1.0.0",
+  "description": "Simple inventory example using StreamSource",
+  "main": "index.js",
+  "scripts": {
+    "api": "ts-node api.ts",
+    "projector": "ts-node projector.ts",
+    "setup": "streamsource-pg setup --db=inventory --port=20091"
+  },
+  "keywords": [],
+  "author": "Jeff Hansen",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/koa": "^2.0.48",
+    "@types/koa-bodyparser": "^4.3.0",
+    "@types/koa-route": "^3.2.4",
+    "@types/pg": "^7.4.14",
+    "ts-node": "^8.2.0",
+    "typescript": "^3.5.1"
+  },
+  "dependencies": {
+    "fejl": "^2.3.1",
+    "http-graceful-shutdown": "^2.3.1",
+    "koa": "^2.7.0",
+    "koa-bodyparser": "^4.2.1",
+    "koa-route": "^3.2.0",
+    "pg": "^7.11.0",
+    "streamsource": "../.."
+  }
+}

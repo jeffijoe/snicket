@@ -14,7 +14,7 @@ jest.setTimeout(50000)
 
 const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
-  notifierConfig: {
+  notifier: {
     type: 'pg-notify',
     keepAliveInterval: 10
   },
@@ -76,7 +76,7 @@ test('pg notifier is faster than polling', async () => {
 
   const pollingStore = createPostgresStreamStore({
     ...cfg,
-    notifierConfig: {
+    notifier: {
       type: 'poll',
       pollingInterval: 200 // This is a relatively high frequency for polling
     }
@@ -84,7 +84,7 @@ test('pg notifier is faster than polling', async () => {
 
   const pgNotifyStore = createPostgresStreamStore({
     ...cfg,
-    notifierConfig: {
+    notifier: {
       type: 'pg-notify',
       keepAliveInterval: 5000
     }

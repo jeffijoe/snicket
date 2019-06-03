@@ -4,6 +4,7 @@
   "description": "Stream Store implementation for Node.JS.",
   "author": "Jeff Hansen",
   "license": "MIT",
+  "main": "./lib/index.js",
   "files": [
     "lib",
     "bin",
@@ -14,10 +15,10 @@
     "streamsource-pg": "./bin/streamsource-pg"
   },
   "scripts": {
-    "build": "rimraf dist/ && tsc -p tsconfig.build.json",
+    "build": "rimraf lib/ && tsc -p tsconfig.build.json",
     "test": "NODE_ENV=test npm run setup-db && NODE_ENV=test jest",
     "cover": "npm run test -- --coverage",
-    "lint": "tslint --project tsconfig.json --fix 'src/**/*.ts' && tsc --noEmit --pretty --project tsconfig.json && prettier --write \"**/*.ts\"",
+    "lint": "tslint --project tsconfig.json --fix '{src, examples}/**/*.ts' && tsc --noEmit --pretty --project tsconfig.json && prettier --write \"{src,examples}/**/*.ts\"",
     "setup-db": "ts-node src/__helpers__/setup-db.ts"
   },
   "dependencies": {
