@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('../lib/streamsource-pg')
+require('../lib/bin/streamsource-pg')

@@ -22,7 +22,7 @@ const cfg: PgStreamStoreConfig = {
     ...streamStoreCfg.pg,
     database: 'delete_stream_test'
   },
-  notifierConfig: {
+  notifier: {
     type: 'pg-notify'
   }
 }

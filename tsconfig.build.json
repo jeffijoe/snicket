@@ -6,7 +6,6 @@
     "lib",
     "src/**/__tests__/*",
     "src/**/__tests__/*/*",
-    "__tests__",
-    "__helpers__"
+    "src/**/__helpers__/*"
   ]
 }

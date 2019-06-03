@@ -19,7 +19,7 @@ export interface PgStreamStoreConfig {
   /**
    * The notififer configuration. Used for subscriptions.
    */
-  notifierConfig?: NotifierConfig
+  notifier?: NotifierConfig
   /**
    * If `true`, waits for a scavenge to complete before returning from `append`.
    * This does not affect setting a stream's metadata, that is always awaited.

@@ -1,14 +1,14 @@
 import { MakeErrorClass } from 'fejl'
 
 /**
- * Thrown when a concurrency error occurs in the event store.
+ * Thrown when a concurrency error occurs in the store.
  */
 export class ConcurrencyError extends MakeErrorClass(
-  'The expected version did not match that of the event store.'
+  'The expected version did not match that of the store.'
 ) {}
 
 /**
- * Thrown when a concurrency error occurs in the event store.
+ * Thrown when a concurrency error occurs in the store.
  */
 export class DuplicateMessageError extends MakeErrorClass() {
   constructor(public id: string) {

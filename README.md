@@ -49,6 +49,8 @@ The code approach gives you more control and let's you use whatever config syste
 
 # Quick Start
 
+If you're looking for a complete example covering CQRS and ES basics, see the [Simple CQRS/ES Inventory sample](examples/simple-cqrs-es-inventory).
+
 A super quick guide to getting started with the essentials.
 
 ```ts
@@ -260,6 +262,20 @@ allPage = await store.readStream(
 )
 ```
 
+## Filtering Expired Messages
+
+The default options are optimized for speed. Due to this, expired messages won't be filtered out and scheduled for purging. This is because reading the all-stream would require looking up stream metadata for each unique stream it finds in order to filter out expired messages. If you are not even using Max Age, then this is wasted work.
+
+This is why filtering expired messages is **opt-in**:
+
+```ts
+const store = createPostgresStreamStore({
+  reading: {
+    filterExpiredMessages: true
+  }
+})
+```
+
 # Stream Metadata
 
 A Stream can have metadata, which is actually itself tracked as a stream of metadata messages! That's pretty... meta.
@@ -371,7 +387,7 @@ To switch to the `pg-notify` notifier, create your stream store like so:
 
 ```ts
 createPostgresStreamStore({
-  notifierConfig: {
+  notifier: {
     type: 'pg-notify',
     // Send a heartbeat query to Postgres every 5 minutes to keep the connection alive.
     keepAliveInterval: 5 * 60 * 1000
@@ -383,12 +399,46 @@ Alternatively, if you just want to change the polling interval:
 
 ```ts
 createPostgresStreamStore({
-  notifierConfig: {
+  notifier: {
     type: 'poll',
     pollingInterval: 2000
   }
 })
 ```
+
+# Gap Detection
+
+During high load, it is natural for sequence gaps to occur in RDBMSes as transactions are rolled back due to conflicts. This is one way of gaps forming, and is harmless.
+
+The more harmful gaps are those where the commit for messages with a higher sequence number to appear in a read before an earlier commit with lower sequence numbers due to not having been written yet, even though the order has been determined. This means that a live subscription that is chasing the head of the all-stream would potentially skip messages during high load.
+
+This is obviously terrible, so StreamSource will detect these gaps, wait a few seconds, then re-issue the read. It will do this *one time*, and if the gaps are still present, then they are either due to transaction rollbacks or deleted messages.
+
+You can configure these parameters when creating the stream store:
+
+- `gapReloadTimes` — how many times to reload if gaps are persisting? Default is `1`
+- `gapReloadDelay` — how long to wait before issuing the next reload. Default is  `5000` (5 seconds)
+
+```ts
+const store = createPostgresStreamStore({
+  gapReloadTimes: 1,
+  gapReloadDelay: 5000
+})
+```
+
+# Logging
+
+By default, logs are being sent into a black hole using the `noopLogger`. You can use the console logger if you want some more insight.
+
+```ts
+import { createConsoleLogger } from 'streamsource'
+
+const store = createPostgresStreamStore({
+  logger: createConsoleLogger('trace') // Specify a log level: trace, debug, info, warn, error
+})
+```
+
+You can also create your own logger. See the implementation of the noop logger for a template.
 
 # Credits
 

@@ -3,6 +3,7 @@ import {
   PgStreamStoreConfig
 } from '../postgres'
 import { createConsoleLogger } from '../logging/console'
+import { DEFAULT_STREAMSOURCE_SCHEMA } from '../postgres/utils/query-util'
 
 const cmd = process.argv[2]
 
@@ -16,7 +17,7 @@ if (!cmd) {
 
 async function runCommand(cmd: string) {
   const logger = createConsoleLogger(
-    getArg('verbose', 'false') !== 'false' ? 'trace' : 'info'
+    process.argv.includes('--verbose') ? 'trace' : 'info'
   )
   const cfg: PgStreamStoreConfig = {
     logger,
@@ -24,7 +25,7 @@ async function runCommand(cmd: string) {
       host: getArg('host', 'localhost'),
       port: getArg('port', '5432'),
       database: getArg('db', 'streamsource'),
-      schema: getArg('schema', 'streamsource'),
+      schema: getArg('schema', DEFAULT_STREAMSOURCE_SCHEMA),
       user: getArg('user', 'postgres'),
       password: getArg('pass', '')
     }
