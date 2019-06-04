@@ -304,6 +304,24 @@ end;
 $$ language plpgsql;
 
 /**
+ * Lists stream IDs.
+ */
+create or replace function __schema__.list_streams(
+  _maxCount int,
+  _afterIdInternal bigint
+) returns table(stream_id text, id_internal bigint)
+as $$
+begin
+  return query
+  select __schema__.stream.id as stream_id, __schema__.stream.id_internal as id_internal
+  from __schema__.stream
+  where __schema__.stream.id_internal > _afterIdInternal
+  order by __schema__.stream.id_internal asc
+  limit _maxCount;
+end;
+$$ language plpgsql;
+
+/**
  * Sets stream metadata.
  */
 create or replace function __schema__.set_stream_metadata(
@@ -511,6 +529,10 @@ DROP FUNCTION IF EXISTS __schema__.read_all(
   int,
   bigint,
   boolean
+) CASCADE;
+DROP FUNCTION IF EXISTS __schema__.list_streams(
+  int,
+  bigint
 ) CASCADE;
 DROP FUNCTION IF EXISTS __schema__.read_head_position() CASCADE;
 DROP FUNCTION IF EXISTS __schema__.read_stream_info(

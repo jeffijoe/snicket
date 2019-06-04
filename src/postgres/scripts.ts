@@ -44,6 +44,15 @@ export function createScripts(schema?: string) {
         serializeDate(createdAt),
         serializeMessage(message)
       ),
+    listStreams: (maxCount: number, afterInternalId: string) =>
+      format(
+        replaceSchema(
+          `select * from __schema__.list_streams(%L, %L::bigint)`,
+          schema
+        ),
+        maxCount,
+        afterInternalId
+      ),
     readStreamInfo: (streamId: string) =>
       format(
         replaceSchema('select * from __schema__.read_stream_info(%L)', schema),

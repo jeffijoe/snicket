@@ -1,0 +1,43 @@
+# Oh yeah!
+language: node_js
+cache:
+  directories:
+    - node_modules
+services:
+  - postgresql
+env:
+  global:
+    - PGPORT=20091
+
+# Add additional versions here as appropriate.
+node_js:
+  - "stable"
+  - "12"
+  - "10"
+  - "8"
+
+# Lint errors should trigger a failure.
+before_script:
+  - npm run lint
+  - npm run build
+
+# Runs the coverage script (which runs the tests)
+script: npm run cover
+
+# Submit code coverage results
+after_success:
+  - npm run coveralls
+
+branches:
+  except:
+    - /^v\d+\.\d+\.\d+$/
+
+jobs:
+  include:
+    # Define the release stage that runs semantic-release
+    - stage: release
+      node_js: lts/*
+      deploy:
+        provider: script
+        skip_cleanup: true
+        script: "npx semantic-release"

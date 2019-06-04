@@ -20,6 +20,7 @@ export function required<T>(
 
 /**
  * Requires the value to be a string and to be defined.
+ *
  * @param paramName
  * @param value
  */
@@ -30,6 +31,7 @@ export function requiredString(paramName: string, value: any): string | never {
 }
 
 /**
+ * Throws if the stream ID is an operational stream.
  *
  * @param paramName
  * @param streamId

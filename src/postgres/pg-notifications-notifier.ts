@@ -31,6 +31,7 @@ export function createPostgresNotifier(
         !_disposed,
         'The notifier has already been disposed.'
       )
+      /* istanbul ignore else */
       if (disposeSubscription) {
         await disposeSubscription()
       }

@@ -5,6 +5,9 @@
   "author": "Jeff Hansen",
   "license": "MIT",
   "main": "./lib/index.js",
+  "engines": {
+    "node": ">=8.0.0"
+  },
   "files": [
     "lib",
     "bin",
@@ -18,6 +21,7 @@
     "build": "rimraf lib/ && tsc -p tsconfig.build.json",
     "test": "NODE_ENV=test npm run setup-db && NODE_ENV=test jest",
     "cover": "npm run test -- --coverage",
+    "coveralls": "cat ./coverage/lcov.info | coveralls",
     "lint": "tslint --project tsconfig.json --fix '{src, examples}/**/*.ts' && tsc --noEmit --pretty --project tsconfig.json && prettier --write \"{src,examples}/**/*.ts\"",
     "setup-db": "ts-node src/__helpers__/setup-db.ts"
   },
@@ -39,6 +43,7 @@
     "@types/pg-format": "^1.0.0",
     "@types/uuid": "^3.4.4",
     "@types/uuid-validate": "^0.0.1",
+    "coveralls": "^3.0.3",
     "husky": "^2.3.0",
     "jest": "^24.8.0",
     "lint-staged": "^8.1.7",

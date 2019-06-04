@@ -276,6 +276,19 @@ const store = createPostgresStreamStore({
 })
 ```
 
+## Listing Streams
+
+If you need to list the stream IDs in the store, there's a handy `listStreams` function.
+
+```ts
+// Get the first 10 stream IDs
+const page1 = await store.listStreams(10)
+console.log(page1.streamIds)
+
+// Get the next 10
+const page2 = await store.listStreams(10, page1.cursor)
+```
+
 # Stream Metadata
 
 A Stream can have metadata, which is actually itself tracked as a stream of metadata messages! That's pretty... meta.

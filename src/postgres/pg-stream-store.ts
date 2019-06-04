@@ -31,7 +31,8 @@ import {
   SetStreamMetadataOptions,
   SetStreamMetadataResult,
   StreamMetadataResult,
-  StreamStore
+  StreamStore,
+  ListStreamsResult
 } from '../types/stream-store'
 import {
   AllSubscription,
@@ -112,6 +113,7 @@ export function createPostgresStreamStore(
 
   const store: StreamStore = {
     appendToStream,
+    listStreams,
     readHeadPosition,
     readAll,
     readStream,
@@ -204,6 +206,38 @@ export function createPostgresStreamStore(
       return { streamPosition, streamVersion }
     } finally {
       writeLatch.exit()
+    }
+  }
+
+  /**
+   * Lists streams in the store.
+   *
+   * @param maxCount
+   * @param cursor
+   */
+  async function listStreams(
+    maxCount: number,
+    cursor?: string
+  ): Promise<ListStreamsResult> {
+    cursor = cursor || '0'
+    invariant.assert(
+      'cursor is not a valid listStreams cursor.',
+      /^\d*$/.test(cursor)
+    )
+    const result = await pool
+      .query(scripts.listStreams(maxCount, cursor))
+      .then(r => r.rows)
+    if (result.length === 0) {
+      return {
+        cursor: '0',
+        streamIds: []
+      }
+    }
+
+    const lastRow = result[result.length - 1]
+    return {
+      cursor: lastRow.id_internal,
+      streamIds: result.map(x => x.stream_id)
     }
   }
 

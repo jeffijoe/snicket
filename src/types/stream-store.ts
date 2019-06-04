@@ -23,6 +23,14 @@ export interface StreamStore {
   readHeadPosition(): Promise<string>
 
   /**
+   * Lists streams in the store. Use the cursor to page.
+   *
+   * @param maxCount the max amount of stream IDs to return.
+   * @param cursor a cursor for the next page.
+   */
+  listStreams(maxCount: number, cursor?: string): Promise<ListStreamsResult>
+
+  /**
    * Reads a stream at the specified `fromVersionInclusive` - use `0` to start at the beginning.
    * Returns a descriptor of the stream as well as the messages.
    *
@@ -129,6 +137,14 @@ export interface StreamStore {
    * Returns a `Promise` when done.
    */
   dispose(): Promise<void>
+}
+
+/**
+ * The result from calling `listStreams`.
+ */
+export interface ListStreamsResult {
+  streamIds: string[]
+  cursor: string
 }
 
 /**

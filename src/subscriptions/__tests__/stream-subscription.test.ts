@@ -38,6 +38,7 @@ beforeEach(() => {
     appendToStream: null as any,
     dispose: null as any,
     subscribeToStream: null as any,
+    listStreams: null as any,
     readHeadPosition: readHeadPositionMock as any,
     readStream: readStreamMock as any,
     readAll: null as any,
