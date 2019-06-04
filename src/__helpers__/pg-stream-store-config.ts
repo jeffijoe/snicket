@@ -9,7 +9,7 @@ export const streamStoreCfg: PgStreamStoreConfig = {
     schema: 'streamsource',
     host: 'localhost',
     user: 'postgres',
-    port: 20091,
+    port: process.env.PGPORT || /* istanbul ignore next */ 20091,
     database: 'streams_test',
     password: ''
   }

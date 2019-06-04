@@ -4,7 +4,13 @@ An interface + Node.JS and Postgres implementation of a Stream/Event/Message Sto
 
 Useful for Event Sourcing.
 
-> **Important**: This is a work in progress.
+[![npm](https://img.shields.io/npm/v/streamsource.svg?maxAge=1000)](https://www.npmjs.com/package/streamsource)
+[![dependency Status](https://img.shields.io/david/jeffijoe/streamsource.svg?maxAge=1000)](https://david-dm.org/jeffijoe/streamsource)
+[![devDependency Status](https://img.shields.io/david/dev/jeffijoe/streamsource.svg?maxAge=1000)](https://david-dm.org/jeffijoe/streamsource)
+[![Build Status](https://img.shields.io/travis/jeffijoe/streamsource.svg?maxAge=1000)](https://travis-ci.org/jeffijoe/streamsource)
+[![Coveralls](https://img.shields.io/coveralls/jeffijoe/streamsource.svg?maxAge=1000)](https://coveralls.io/github/jeffijoe/streamsource)
+[![npm](https://img.shields.io/npm/dt/streamsource.svg?maxAge=1000)](https://www.npmjs.com/package/streamsource)
+[![npm](https://img.shields.io/npm/l/streamsource.svg?maxAge=1000)](https://github.com/jeffijoe/streamsource/blob/master/LICENSE.md)
 
 # Installing
 

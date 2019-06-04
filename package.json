@@ -1,6 +1,6 @@
 {
   "name": "streamsource",
-  "version": "0.0.0",
+  "version": "0.0.0-development",
   "description": "Stream Store implementation for Node.JS.",
   "author": "Jeff Hansen",
   "license": "MIT",
@@ -22,8 +22,9 @@
     "test": "NODE_ENV=test npm run setup-db && NODE_ENV=test jest",
     "cover": "npm run test -- --coverage",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
-    "lint": "tslint --project tsconfig.json --fix '{src, examples}/**/*.ts' && tsc --noEmit --pretty --project tsconfig.json && prettier --write \"{src,examples}/**/*.ts\"",
-    "setup-db": "ts-node src/__helpers__/setup-db.ts"
+    "lint": "tslint --project tsconfig.json --fix 'src/**/*.ts' && tsc --noEmit --pretty --project tsconfig.json && prettier --write \"{src,examples}/**/*.ts\"",
+    "setup-db": "ts-node src/__helpers__/setup-db.ts",
+    "semantic-release": "semantic-release"
   },
   "dependencies": {
     "big-integer": "^1.6.43",
@@ -60,7 +61,8 @@
     "tslint-config-standard": "^8.0.1",
     "tslint-consistent-codestyle": "^1.15.1",
     "typescript": "^3.4.5",
-    "uuid": "^3.3.2"
+    "uuid": "^3.3.2",
+    "semantic-release": "^15.13.12"
   },
   "prettier": {
     "singleQuote": true,
@@ -107,5 +109,9 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeffijoe/streamsource.git"
   }
 }
