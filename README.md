@@ -459,6 +459,10 @@ const store = createPostgresStreamStore({
 
 You can also create your own logger. See the implementation of the noop logger for a template.
 
-# Credits
+# About
 
 Built by Jeff Hansen - [@Jeffijoe](https://twitter.com/Jeffijoe) - with a lot of inspiration from [SQL Stream Store](https://github.com/SQLStreamStore/SQLStreamStore) (.NET)
+
+The name **Snicket** comes from _A Series of Unfortunate Events_
+
+... _Events_... Get it?
