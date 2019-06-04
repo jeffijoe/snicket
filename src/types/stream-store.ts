@@ -224,7 +224,7 @@ export interface SetStreamMetadataOptions {
    */
   maxCount?: number | null
   /**
-   * Messages with a version older than or equal to this will become eligible for scavenging.
+   * Messages with a version less than (but not including) this will become eligible for scavenging.
    *
    * `null` (or `undefined`) means disabled.
    */

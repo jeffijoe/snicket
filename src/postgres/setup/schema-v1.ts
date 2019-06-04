@@ -499,7 +499,7 @@ begin
     select __schema__.message.message_id as message_id
     from __schema__.message
     where __schema__.message.stream_id_internal = _streamIdInternal
-    and __schema__.message.stream_version <= _truncateBefore;
+    and __schema__.message.stream_version < _truncateBefore;
   end if;
 
 end

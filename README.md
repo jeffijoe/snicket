@@ -305,7 +305,7 @@ There are a few "special" attributes that will affect **scavenging**:
 
 - `naxAge` — The amount of time (in seconds) that messages in the stream are valid for. Messages older than this won't be returned, and become eligible for scavenging.
 - `maxCount` — The max amount of messages allowed in the stream. When appending to a stream with `maxCount` set, it will purge extraneous messages.
-- `truncateBefore` — Messages with a stream version older than or equal to this will become eligible for scavenging.
+- `truncateBefore` — Messages with a stream version older than (but not including) this will become eligible for scavenging.
 
 Let's try setting some Stream Metadata:
 

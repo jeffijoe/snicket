@@ -26,13 +26,15 @@ test('scavenges stream with a truncate before on append', async () => {
     generateMessages(5)
   )
   read = await store.readStream(streamId, 0, 100)
+  const truncatedAt = read.messages[5]
   expect(read.messages).toHaveLength(10)
 
   await store.setStreamMetadata(streamId, ExpectedVersion.Empty, {
-    truncateBefore: 4
+    truncateBefore: 5
   })
   read = await store.readStream(streamId, 0, 100)
   expect(read.messages).toHaveLength(5)
+  expect(read.messages[0].messageId).toBe(truncatedAt.messageId)
 
   write = await store.appendToStream(
     streamId,
