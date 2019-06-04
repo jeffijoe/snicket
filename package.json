@@ -1,6 +1,6 @@
 {
   "name": "snicket",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Stream Store implementation for Node.JS.",
   "author": "Jeff Hansen",
   "license": "MIT",
