@@ -83,8 +83,8 @@ function printHelp() {
   console.log('    --port=5432               The PG server port to use')
   console.log('    --user=postgres           The PG user to authenticate as')
   console.log('    --pass=                   The PG user password')
-  console.log('    --db=snicket         The database to create or modify')
-  console.log('    --schema=snicket     The schema to use. I recommend specifying one over using public.')
+  console.log('    --db=snicket              The database to create or modify')
+  console.log('    --schema=snicket          The schema to use. I recommend specifying one over using public.')
   console.log()
   console.log('  teardown                    Deletes the Snicket tables and data. Same arguments as setup.')
 }

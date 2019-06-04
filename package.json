@@ -30,6 +30,7 @@
     "big-integer": "^1.6.43",
     "fejl": "^2.3.0",
     "pg-format": "^1.0.4",
+    "uuid": "^3.3.2",
     "uuid-validate": "^0.0.3"
   },
   "peerDependencies": {
@@ -61,7 +62,6 @@
     "tslint-config-standard": "^8.0.1",
     "tslint-consistent-codestyle": "^1.15.1",
     "typescript": "^3.4.5",
-    "uuid": "^3.3.2",
     "semantic-release": "^15.13.12"
   },
   "prettier": {
