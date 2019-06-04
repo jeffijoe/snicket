@@ -1,5 +1,5 @@
-import { PgStreamStoreConfig } from 'streamsource/lib/postgres'
-import { createConsoleLogger } from 'streamsource'
+import { PgStreamStoreConfig } from 'snicket/lib/postgres'
+import { createConsoleLogger } from 'snicket'
 
 export const streamStoreConfig: PgStreamStoreConfig = {
   logger: createConsoleLogger('info'),

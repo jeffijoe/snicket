@@ -6,7 +6,7 @@ export const streamStoreCfg: PgStreamStoreConfig = {
   gapReloadDelay: 1000,
   pg: {
     dropIfTest: true,
-    schema: 'streamsource',
+    schema: 'snicket',
     host: 'localhost',
     user: 'postgres',
     port: process.env.PGPORT || /* istanbul ignore next */ 20091,

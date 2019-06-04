@@ -1,8 +1,8 @@
 import { db, setupReadModelSchema } from './infra/pg'
-import { createPostgresStreamStore } from 'streamsource/lib/postgres'
+import { createPostgresStreamStore } from 'snicket/lib/postgres'
 import { streamStoreConfig } from './cfg'
 import { InventoryItemEvent } from './inventory/events'
-import { SubscribeAt } from 'streamsource'
+import { SubscribeAt } from 'snicket'
 import { PoolClient } from 'pg'
 
 // Reuse the stream store console logger cause it's pretty :D

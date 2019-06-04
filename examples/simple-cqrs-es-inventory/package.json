@@ -1,12 +1,12 @@
 {
   "name": "inventory",
   "version": "1.0.0",
-  "description": "Simple inventory example using StreamSource",
+  "description": "Simple inventory example using Snicket",
   "main": "index.js",
   "scripts": {
     "api": "ts-node api.ts",
     "projector": "ts-node projector.ts",
-    "setup": "streamsource-pg setup --db=inventory --port=20091"
+    "setup": "snicket-pg setup --db=inventory --port=20091"
   },
   "keywords": [],
   "author": "Jeff Hansen",
@@ -26,6 +26,6 @@
     "koa-bodyparser": "^4.2.1",
     "koa-route": "^3.2.0",
     "pg": "^7.11.0",
-    "streamsource": "../.."
+    "snicket": "../.."
   }
 }

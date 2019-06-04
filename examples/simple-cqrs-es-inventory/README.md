@@ -1,6 +1,6 @@
 # Inventory sample
 
-Basic CQRS + EventSourcing inventory example using StreamSource, loosely based on [Greg Young's `mär` SimpleCQRS sample](https://github.com/gregoryyoung/m-r)
+Basic CQRS + EventSourcing inventory example using Snicket, loosely based on [Greg Young's `mär` SimpleCQRS sample](https://github.com/gregoryyoung/m-r)
 
 It features the following:
 
@@ -20,21 +20,21 @@ There are 2 entrypoints:
 
 **Disclaimer**: this code + documentation was thrown together over the course of ~3 hours, and could definitely be cleaner.
 
-**Note**: the `streamsource` package reference in `package.json` is pointing to `../..` as it's meant to be run from within the StreamSource repo. This means you should `yarn && yarn build` at the root first.
+**Note**: the `snicket` package reference in `package.json` is pointing to `../..` as it's meant to be run from within the Snicket repo. This means you should `yarn && yarn build` at the root first.
 
-If you are trying to run it with the npm version, simply remove the package reference and `npm install streamsource`.
+If you are trying to run it with the npm version, simply remove the package reference and `npm install snicket`.
 
 # Running
 
 We need a Postgres server on `localhost` accepting traffic on port `20091`.
 
-**If you have Docker**, open a new terminal window, and `cd` to the root of the StreamSource repository. There, run `docker-compose up` to start a Postgres server listening on port 20091.
+**If you have Docker**, open a new terminal window, and `cd` to the root of the Snicket repository. There, run `docker-compose up` to start a Postgres server listening on port 20091.
 
 **If you don't have Docker**, start a Postgres server on port 20091 using whatever other approach available to you. You can also replace all occurences of 20091 with your own Postgres port if you want.
 
 ---
 
-Run `npm run setup` — this will set up the StreamSource `inventory` database in Postgres.
+Run `npm run setup` — this will set up the Snicket `inventory` database in Postgres.
 
 Then, run `npm run api` in one terminal window and `npm run projector` in another. The projector will create a basic read model in the same Postgres database for convenience.
 

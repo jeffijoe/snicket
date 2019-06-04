@@ -3,7 +3,7 @@ import {
   PgStreamStoreConfig
 } from '../postgres'
 import { createConsoleLogger } from '../logging/console'
-import { DEFAULT_STREAMSOURCE_SCHEMA } from '../postgres/utils/query-util'
+import { DEFAULT_SNICKET_SCHEMA } from '../postgres/utils/query-util'
 
 const cmd = process.argv[2]
 
@@ -24,8 +24,8 @@ async function runCommand(cmd: string) {
     pg: {
       host: getArg('host', 'localhost'),
       port: getArg('port', '5432'),
-      database: getArg('db', 'streamsource'),
-      schema: getArg('schema', DEFAULT_STREAMSOURCE_SCHEMA),
+      database: getArg('db', 'snicket'),
+      schema: getArg('schema', DEFAULT_SNICKET_SCHEMA),
       user: getArg('user', 'postgres'),
       password: getArg('pass', '')
     }
@@ -35,14 +35,12 @@ async function runCommand(cmd: string) {
     case 'setup':
       return bootstrapper
         .bootstrap()
-        .then(() => logger.info('StreamSource database is ready.'))
+        .then(() => logger.info('Snicket database is ready.'))
     case 'teardown':
       return bootstrapper
         .teardown()
         .then(() =>
-          logger.info(
-            'StreamSource tables, indexes and types have been dropped.'
-          )
+          logger.info('Snicket tables, indexes and types have been dropped.')
         )
     case 'help':
       return printHelp()
@@ -75,7 +73,7 @@ function getArg(name: string, defaultValue: string) {
 
 // prettier-ignore
 function printHelp() {
-  console.log('StreamSource Postgres management tool\n')
+  console.log('Snicket Postgres management tool\n')
   console.log('Global options:')
   console.log('  --verbose                   Log more stuff')
   console.log()
@@ -85,8 +83,8 @@ function printHelp() {
   console.log('    --port=5432               The PG server port to use')
   console.log('    --user=postgres           The PG user to authenticate as')
   console.log('    --pass=                   The PG user password')
-  console.log('    --db=streamsource         The database to create or modify')
-  console.log('    --schema=streamsource     The schema to use. I recommend specifying one over using public.')
+  console.log('    --db=snicket         The database to create or modify')
+  console.log('    --schema=snicket     The schema to use. I recommend specifying one over using public.')
   console.log()
-  console.log('  teardown                    Deletes the StreamSource tables and data. Same arguments as setup.')
+  console.log('  teardown                    Deletes the Snicket tables and data. Same arguments as setup.')
 }

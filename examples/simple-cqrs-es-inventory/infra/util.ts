@@ -1,4 +1,4 @@
-import { StreamStore, StreamMessage } from 'streamsource'
+import { StreamStore, StreamMessage } from 'snicket'
 
 /**
  * Reads a stream to the end.

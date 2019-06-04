@@ -3,7 +3,7 @@ import {
   ExpectedVersion,
   NewStreamMessage,
   ConcurrencyError
-} from 'streamsource'
+} from 'snicket'
 import * as Inventory from './'
 import { readStreamToEnd, toStreamId } from '../infra/util'
 import uuid from 'uuid'

@@ -1,4 +1,4 @@
-import { createPostgresStreamStore } from 'streamsource/lib/postgres'
+import { createPostgresStreamStore } from 'snicket/lib/postgres'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
 import { streamStoreConfig } from './cfg'

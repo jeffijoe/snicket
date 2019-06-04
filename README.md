@@ -1,26 +1,26 @@
-# StreamSource
+# Snicket
 
-An interface + Node.JS and Postgres implementation of a Stream/Event/Message Store.
+An interface + Node.JS and **Postgres 9.4+** implementation of a Stream/Event/Message Store.
 
 Useful for Event Sourcing.
 
-[![npm](https://img.shields.io/npm/v/streamsource.svg?maxAge=1000)](https://www.npmjs.com/package/streamsource)
-[![dependency Status](https://img.shields.io/david/jeffijoe/streamsource.svg?maxAge=1000)](https://david-dm.org/jeffijoe/streamsource)
-[![devDependency Status](https://img.shields.io/david/dev/jeffijoe/streamsource.svg?maxAge=1000)](https://david-dm.org/jeffijoe/streamsource)
-[![Build Status](https://img.shields.io/travis/jeffijoe/streamsource.svg?maxAge=1000)](https://travis-ci.org/jeffijoe/streamsource)
-[![Coveralls](https://img.shields.io/coveralls/jeffijoe/streamsource.svg?maxAge=1000)](https://coveralls.io/github/jeffijoe/streamsource)
-[![npm](https://img.shields.io/npm/dt/streamsource.svg?maxAge=1000)](https://www.npmjs.com/package/streamsource)
-[![npm](https://img.shields.io/npm/l/streamsource.svg?maxAge=1000)](https://github.com/jeffijoe/streamsource/blob/master/LICENSE.md)
+[![npm](https://img.shields.io/npm/v/snicket.svg?maxAge=1000)](https://www.npmjs.com/package/snicket)
+[![dependency Status](https://img.shields.io/david/jeffijoe/snicket.svg?maxAge=1000)](https://david-dm.org/jeffijoe/snicket)
+[![devDependency Status](https://img.shields.io/david/dev/jeffijoe/snicket.svg?maxAge=1000)](https://david-dm.org/jeffijoe/snicket)
+[![Build Status](https://img.shields.io/travis/jeffijoe/snicket.svg?maxAge=1000)](https://travis-ci.org/jeffijoe/snicket)
+[![Coveralls](https://img.shields.io/coveralls/jeffijoe/snicket.svg?maxAge=1000)](https://coveralls.io/github/jeffijoe/snicket)
+[![npm](https://img.shields.io/npm/dt/snicket.svg?maxAge=1000)](https://www.npmjs.com/package/snicket)
+[![npm](https://img.shields.io/npm/l/snicket.svg?maxAge=1000)](https://github.com/jeffijoe/snicket/blob/master/LICENSE.md)
 
 # Installing
 
 Get it on npm:
 
 ```bash
-npm install streamsource
+npm install snicket
 ```
 
-Currently, StreamSource only supports a Postgres implementation, so you also need to install `pg`. It's listed as a `peerDependency` in case we add support for other backends, that way we don't install drivers for backends we don't use.
+Currently, Snicket only supports a Postgres implementation, so you also need to install `pg`. It's listed as a `peerDependency` in case we add support for other backends, that way we don't install drivers for backends we don't use.
 
 ```bash
 npm install pg
@@ -28,17 +28,17 @@ npm install pg
 
 # Setting it up
 
-You can either run the StreamSource Postgres setup tool:
+You can either run the Snicket Postgres setup tool:
 
 ```bash
-# Run `npx streamsource-pg` to view available parameters.
-npx streamsource-pg setup
+# Run `npx snicket-pg` to view available parameters.
+npx snicket-pg setup
 ```
 
 Or you can use the bootstrapper:
 
 ```ts
-import { createPostgresStreamStoreBootstrapper } from 'streamsource/lib/postgres'
+import { createPostgresStreamStoreBootstrapper } from 'snicket/lib/postgres'
 
 const bootstrapper = createPostgresStreamStoreBootstrapper({
   pg: {
@@ -61,8 +61,8 @@ A super quick guide to getting started with the essentials.
 
 ```ts
 import * as uuid from 'uuid'
-import { ExpectedVersion, SubscribeAt } from 'streamsource'
-import { createPostgresStreamStore } from 'streamsource/lib/postgres'
+import { ExpectedVersion, SubscribeAt } from 'snicket'
+import { createPostgresStreamStore } from 'snicket/lib/postgres'
 
 const store = createPostgresStreamStore({
   pg: { /* same as above */ }
@@ -178,7 +178,7 @@ await store.appendToStream(
 If there's an expected-version mismatch, a `ConcurrencyError` is thrown.
 
 ```ts
-import { ConcurrencyError } from 'streamsource'
+import { ConcurrencyError } from 'snicket'
 
 await store.appendToStream(
   'account-123',
@@ -229,7 +229,7 @@ if (streamPage.isEnd === false) {
 We can also read all messages from all streams back in the order they were saved.
 
 ```ts
-import { Position } from 'streamsource'
+import { Position } from 'snicket'
 let allPage = await store.readStream(
   Position.Start,  // From what global position?
   100 // How many to read?
@@ -251,7 +251,7 @@ if (allPage.isEnd === false) {
 Both reads support reading backwards, too.
 
 ```ts
-import { ReadDirection } from 'streamsource'
+import { ReadDirection } from 'snicket'
 
 await store.readStream(
   Position.Start, 
@@ -349,7 +349,7 @@ Setting stream metadata itself also triggers a scavenge on the actual stream, ho
 
 # Subscriptions
 
-StreamSource provides a basic Consumer-based Subscription API over individual streams with `subscribeToStream`, as well as a way to subscribe to every stream at once, using `subscribeToAll`. Being consumer-based, it is up to you to save the "last seen" checkpoint, and provide it upon starting a subscription.
+Snicket provides a basic Consumer-based Subscription API over individual streams with `subscribeToStream`, as well as a way to subscribe to every stream at once, using `subscribeToAll`. Being consumer-based, it is up to you to save the "last seen" checkpoint, and provide it upon starting a subscription.
 
 `subscribeToStream` uses the stream version as a checkpoint, while `subscribeToAll` uses the global message position.
 
@@ -395,7 +395,7 @@ await store.subscribeToAll(
 
 ## Notifiers
 
-In order for StreamSource to know when new messages are available, it must receive a signal from a *notifier*.
+In order for Snicket to know when new messages are available, it must receive a signal from a *notifier*.
 
 There are 2 types of notifiers.
 
@@ -431,7 +431,7 @@ During high load, it is natural for sequence gaps to occur in RDBMSes as transac
 
 The more harmful gaps are those where the commit for messages with a higher sequence number to appear in a read before an earlier commit with lower sequence numbers due to not having been written yet, even though the order has been determined. This means that a live subscription that is chasing the head of the all-stream would potentially skip messages during high load.
 
-This is obviously terrible, so StreamSource will detect these gaps, wait a few seconds, then re-issue the read. It will do this *one time*, and if the gaps are still present, then they are either due to transaction rollbacks or deleted messages.
+This is obviously terrible, so Snicket will detect these gaps, wait a few seconds, then re-issue the read. It will do this *one time*, and if the gaps are still present, then they are either due to transaction rollbacks or deleted messages.
 
 You can configure these parameters when creating the stream store:
 
@@ -450,7 +450,7 @@ const store = createPostgresStreamStore({
 By default, logs are being sent into a black hole using the `noopLogger`. You can use the console logger if you want some more insight.
 
 ```ts
-import { createConsoleLogger } from 'streamsource'
+import { createConsoleLogger } from 'snicket'
 
 const store = createPostgresStreamStore({
   logger: createConsoleLogger('trace') // Specify a log level: trace, debug, info, warn, error
