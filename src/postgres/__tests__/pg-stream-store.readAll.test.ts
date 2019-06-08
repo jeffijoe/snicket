@@ -1,7 +1,7 @@
 import { createPostgresStreamStore } from '../pg-stream-store'
 import { PgStreamStoreConfig } from '../types/config'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
-import { createPostgresStreamStoreBootstrapper } from '../setup/setup'
+import { createPostgresStreamStoreBootstrapper } from '../setup/bootstrapper'
 import { v4 } from 'uuid'
 import { ExpectedVersion, ReadDirection } from '../../types/stream-store'
 import { generateMessages } from './__helpers__/message-helper'

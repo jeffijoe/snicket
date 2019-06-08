@@ -7,7 +7,7 @@ import { SubscribeAt } from '../../types/subscriptions'
 import { delay } from '../../utils/promise-util'
 import { noopLogger } from '../../logging/noop'
 import { PgStreamStoreConfig } from '../types/config'
-import { createPostgresStreamStoreBootstrapper } from '../setup/setup'
+import { createPostgresStreamStoreBootstrapper } from '../setup/bootstrapper'
 import { waitUntil } from '../../__helpers__/wait-helper'
 
 jest.setTimeout(50000)

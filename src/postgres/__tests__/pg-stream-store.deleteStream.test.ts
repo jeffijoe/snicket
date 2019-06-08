@@ -10,7 +10,7 @@ import { generateMessages } from './__helpers__/message-helper'
 import { OperationalStream, StreamDeleted } from '../../types/messages'
 import { ConcurrencyError } from '../../errors/errors'
 import { PgStreamStoreConfig } from '../types/config'
-import { createPostgresStreamStoreBootstrapper } from '../setup/setup'
+import { createPostgresStreamStoreBootstrapper } from '../setup/bootstrapper'
 import {
   waitForStreamSubscription,
   waitForAllSubscription

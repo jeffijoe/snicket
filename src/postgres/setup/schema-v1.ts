@@ -8,6 +8,12 @@ export const SETUP_SQL = `
 CREATE SCHEMA IF NOT EXISTS __schema__;
 
 /**
+ * Add schema version as comment.
+ */
+COMMENT ON SCHEMA __schema__
+IS '{ "snicket_pg_version": 1 }';
+
+/**
  * Stream table. We use internal IDs as a perf boost for joining.
  */
 CREATE TABLE IF NOT EXISTS __schema__.stream (
@@ -564,4 +570,5 @@ DROP FUNCTION IF EXISTS __schema__.get_scavengable_stream_messages(
   timestamp with time zone
 ) CASCADE;
 DROP TYPE IF EXISTS __schema__.new_stream_message CASCADE;
+DROP SCHEMA __schema__;
 `

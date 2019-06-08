@@ -4,6 +4,7 @@ import { PgStreamStoreConfig } from '../types/config'
 import { createPostgresPool, runInTransaction } from '../connection'
 import * as queryUtil from '../utils/query-util'
 import * as schemaV1 from './schema-v1'
+import { Pool, PoolClient } from 'pg'
 
 /**
  * Bootstrapper for the Postgres Stream Store.
@@ -36,6 +37,14 @@ export function createPostgresStreamStoreBootstrapper(
             throw err
           }
         )
+    },
+
+    /**
+     * Gets the Snicket PG schema version.
+     */
+    getSchemaInfo() {
+      const pool = createPostgresPool(config.pg)
+      return getSchemaInfo(pool)
     },
 
     /**
@@ -79,10 +88,15 @@ export function createPostgresStreamStoreBootstrapper(
     logger.trace('Setting up the tables, indexes and types.')
     const pool = createPostgresPool(config.pg)
     try {
-      await runInTransaction(pool, trx => {
-        const sql = replaceSchema(schemaV1.SETUP_SQL)
-        return trx.query(sql)
-      }).catch(ignoreErrorIfExists)
+      const { version } = await getSchemaInfo(pool)
+      if (version === 0) {
+        logger.trace('Setting up Snicket PG schema v1')
+        await runInTransaction(pool, trx =>
+          trx.query(replaceSchema(schemaV1.SETUP_SQL))
+        ).catch(ignoreErrorIfExists)
+      } else {
+        logger.trace('Schema already set up at version ' + version)
+      }
     } finally {
       await pool.end()
     }
@@ -144,6 +158,28 @@ export function createPostgresStreamStoreBootstrapper(
     } finally {
       await pool.end()
     }
+  }
+
+  /**
+   * Gets schema info.
+   *
+   * @param client
+   */
+  function getSchemaInfo(client: Pool | PoolClient) {
+    return client
+      .query(
+        replaceSchema(
+          `SELECT obj_description('__schema__'::regnamespace, 'pg_namespace') as comment`
+        )
+      )
+      .catch(ignoreErrorIfNotExists)
+      .then(result => {
+        if (!result || result.rows.length !== 1) return { version: 0 }
+        const parsed = JSON.parse(result.rows[0].comment)
+        return {
+          version: parsed.snicket_pg_version as number
+        }
+      })
   }
 
   /**

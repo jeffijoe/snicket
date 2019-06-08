@@ -1,4 +1,4 @@
-import { createPostgresStreamStoreBootstrapper } from '../postgres/setup/setup'
+import { createPostgresStreamStoreBootstrapper } from '../postgres/setup/bootstrapper'
 import { streamStoreCfg } from './pg-stream-store-config'
 import { createConsoleLogger } from '../logging/console'
 
