@@ -44,7 +44,7 @@ import {
   Subscription,
   SubscriptionOptions
 } from '../types/subscriptions'
-import { uniq } from '../utils/array-util'
+import { uniq, groupBy } from '../utils/array-util'
 import { filterExpiredMessages } from '../utils/filter-expired'
 import { detectGapsAndReloadAll } from '../utils/gap-detection'
 import { isMetaStream, toMetadataStreamId } from '../utils/id-util'
@@ -549,10 +549,10 @@ export function createPostgresStreamStore(
    * @param messageId
    */
   async function deleteMessage(
-    _streamId: string,
+    streamId: string,
     messageId: string
   ): Promise<void> {
-    return deleteMessages([messageId])
+    return deleteMessages(streamId, [messageId])
   }
 
   /**
@@ -561,11 +561,14 @@ export function createPostgresStreamStore(
    * @param streamId
    * @param expectedVersion
    */
-  async function deleteMessages(messageIds: Array<string>): Promise<void> {
+  async function deleteMessages(
+    streamId: string,
+    messageIds: Array<string>
+  ): Promise<void> {
     writeLatch.enter()
     try {
       await runInTransaction(pool, trx =>
-        trx.query(scripts.deleteMessages(messageIds))
+        trx.query(scripts.deleteMessages(streamId, messageIds))
       )
       logger.trace(`pg-stream-store: deleted ${messageIds.length} messages`)
     } finally {
@@ -673,9 +676,15 @@ export function createPostgresStreamStore(
     if (messages.length === 0) {
       return
     }
+    const groupedByStreamId = groupBy(messages, 'streamId')
     writeLatch.enter()
+
     // We don't await this.
-    deleteMessages(messages.map(m => m.messageId))
+    Promise.all(
+      groupedByStreamId.map(([streamId, messages]) =>
+        deleteMessages(streamId, messages.map(m => m.messageId))
+      )
+    )
       .then(writeLatch.exit)
       .catch(writeLatch.exit)
   }
@@ -770,7 +779,7 @@ export function createPostgresStreamStore(
           result.length
         } messages in stream ${streamId} to scavenge; deleting...`
       )
-      await deleteMessages(result)
+      await deleteMessages(streamId, result)
       logger.trace(
         `pg-stream-store:scavenge: deleted ${
           result.length
@@ -937,7 +946,7 @@ function isConcurrencyUniqueConstraintViolation(err: any) {
  * @param err
  */
 function isDuplicateMessageIdUniqueConstraintViolation(err: any) {
-  return err.message.endsWith('"message_message_id_key"')
+  return err.message.endsWith('"message_stream_id_internal_message_id_unique"')
 }
 
 /**
@@ -949,9 +958,16 @@ function extractUuidKeyFromConstraintViolationError(err: any): string {
   const result = Array.from(
     /=\((.*?)\)/g.exec(err.detail) || /* istanbul ignore next */ []
   )
-  return result.length > 1
-    ? result[1]
-    : /* istanbul ignore next */ '[unable to parse]'
+
+  /* istanbul ignore next */
+  if (result.length < 2) {
+    return '[unable to parse]'
+  }
+
+  // It might be a single UUID or it might be a composite.
+  // Splitting on the comma and taking the last value will do the trick.
+  const splat = result[1].split(', ')
+  return splat[splat.length - 1]
 }
 
 /**

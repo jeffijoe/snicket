@@ -89,12 +89,13 @@ export function createScripts(schema?: string) {
         fromPositionInclusive,
         forward
       ),
-    deleteMessages: (messageIds: Array<string>) =>
+    deleteMessages: (streamId: string, messageIds: Array<string>) =>
       format(
         replaceSchema(
-          'select * from __schema__.delete_messages(ARRAY[%L]::uuid[])',
+          'select * from __schema__.delete_messages(%L, ARRAY[%L]::uuid[])',
           schema
         ),
+        streamId,
         messageIds
       ),
     deleteStream: (

@@ -31,7 +31,7 @@ CREATE SEQUENCE IF NOT EXISTS __schema__.message_seq
  */
 CREATE TABLE IF NOT EXISTS __schema__.message (
   stream_id_internal bigint NOT NULL REFERENCES __schema__.stream(id_internal),
-  message_id uuid NOT NULL UNIQUE,
+  message_id uuid NOT NULL,
   stream_version integer NOT NULL,
   position bigint NOT NULL PRIMARY KEY DEFAULT nextval('__schema__.message_seq'),
   created_at timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc'),
@@ -364,14 +364,21 @@ $$ language plpgsql;
  * Deletes messages in a stream.
  */
 create or replace function __schema__.delete_messages(
+  _streamId text,
   _messageIds uuid []
 ) returns int as $$
 declare
   _deletedCount int;
+  _streamIdInternal int;
 begin
+  select __schema__.stream.id_internal
+  into _streamIdInternal
+  from __schema__.stream
+  where __schema__.stream.id = _streamId;
 
   delete from __schema__.message
-  where __schema__.message.message_id = any (_messageIds);
+  where __schema__.message.stream_id_internal = _streamIdInternal
+  and __schema__.message.message_id = any (_messageIds);
 
   return count(_messageIds);
 end
@@ -546,6 +553,7 @@ DROP FUNCTION IF EXISTS __schema__.set_stream_metadata(
  __schema__.new_stream_message
 ) CASCADE;
 DROP FUNCTION IF EXISTS __schema__.delete_messages(
+  text,
   uuid []
 ) CASCADE;
 DROP FUNCTION IF EXISTS __schema__.get_scavengable_stream_messages(
