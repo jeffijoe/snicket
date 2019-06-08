@@ -27,7 +27,9 @@ export async function detectGapsAndReloadAll(
 ) {
   let result = await readAll(fromPositionInclusive, count)
   let reloadCount = 0
-  if (result.messages.length <= 1) {
+  // If we are not on the last page, then there's likely no transient gaps,
+  // and we can save a bunch of time by not checking and reloading.
+  if (!result.isEnd || result.messages.length <= 1) {
     return result
   }
 
