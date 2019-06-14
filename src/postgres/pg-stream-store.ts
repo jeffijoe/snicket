@@ -9,6 +9,7 @@ import {
 } from '../errors/errors'
 import { noopLogger } from '../logging/noop'
 import { createMetadataCache } from '../meta/metadata-cache'
+import { jsonSerializer } from '../serialization/json'
 import { createAllSubscription } from '../subscriptions/all-subscription'
 import { createPollingNotifier } from '../subscriptions/polling-notifier'
 import { createStreamSubscription } from '../subscriptions/stream-subscription'
@@ -25,14 +26,14 @@ import {
 import {
   AppendToStreamResult,
   ExpectedVersion,
+  ListStreamsResult,
   ReadAllResult,
   ReadDirection,
   ReadStreamResult,
   SetStreamMetadataOptions,
   SetStreamMetadataResult,
   StreamMetadataResult,
-  StreamStore,
-  ListStreamsResult
+  StreamStore
 } from '../types/stream-store'
 import {
   AllSubscription,
@@ -44,7 +45,7 @@ import {
   Subscription,
   SubscriptionOptions
 } from '../types/subscriptions'
-import { uniq, groupBy } from '../utils/array-util'
+import { groupBy, uniq } from '../utils/array-util'
 import { filterExpiredMessages } from '../utils/filter-expired'
 import { detectGapsAndReloadAll } from '../utils/gap-detection'
 import { isMetaStream, toMetadataStreamId } from '../utils/id-util'
@@ -73,6 +74,7 @@ export function createPostgresStreamStore(
   config: PgStreamStoreConfig
 ): PgStreamStore {
   const logger = config.logger || noopLogger
+  const serializer = config.serializer || jsonSerializer
   const gapReloadDelay =
     config.gapReloadDelay || /* istanbul ignore next */ 5000
   const gapReloadTimes = config.gapReloadTimes || /* istanbul ignore next */ 1
@@ -94,7 +96,7 @@ export function createPostgresStreamStore(
       )
     : null
   const pool = createPostgresPool(config.pg)
-  const scripts = createScripts(config.pg.schema)
+  const scripts = createScripts(config.pg.schema, serializer)
   // Keep track of subscriptions so we can dispose them when the store is disposed.
   let subscriptions: Subscription[] = []
   // Cache the notifier.
@@ -775,15 +777,11 @@ export function createPostgresStreamStore(
       }
 
       logger.trace(
-        `pg-stream-store:scavenge: found ${
-          result.length
-        } messages in stream ${streamId} to scavenge; deleting...`
+        `pg-stream-store:scavenge: found ${result.length} messages in stream ${streamId} to scavenge; deleting...`
       )
       await deleteMessages(streamId, result)
       logger.trace(
-        `pg-stream-store:scavenge: deleted ${
-          result.length
-        } messages from stream ${streamId} during scavenge.`
+        `pg-stream-store:scavenge: deleted ${result.length} messages from stream ${streamId} during scavenge.`
       )
     } catch (err) {
       /* istanbul ignore next */
@@ -840,6 +838,57 @@ export function createPostgresStreamStore(
     purgeExpiredMessages(expired)
     return valid
   }
+
+  /**
+   * Maps the read stream DB result to the proper result.
+   *
+   * @param messages
+   * @param streamInfo
+   * @param forward
+   */
+  function mapReadStreamResult(
+    messages: any[],
+    streamInfo: any,
+    isEnd: boolean,
+    forward: boolean
+  ): ReadStreamResult {
+    const lastMessage =
+      messages.length > 0 ? messages[messages.length - 1] : null
+    return {
+      streamId: streamInfo.id,
+      streamVersion: streamInfo.stream_version,
+      streamPosition: streamInfo.position,
+      streamType: streamInfo.stream_type,
+      nextVersion: forward
+        ? (lastMessage
+            ? isEnd
+              ? streamInfo.stream_version
+              : lastMessage.stream_version
+            : streamInfo.stream_version) + 1
+        : Math.max(0, (isEnd ? 0 : lastMessage.stream_version) - 1),
+      isEnd: isEnd,
+      messages: messages.map(mapMessageResult)
+    } as ReadStreamResult
+  }
+
+  /**
+   * Maps a Message result.
+   *
+   * @param streamType
+   * @param message
+   */
+  function mapMessageResult(message: any): StreamMessage {
+    return {
+      streamId: message.stream_id,
+      messageId: message.message_id,
+      data: serializer.deserialize(message.data),
+      meta: serializer.deserialize(message.meta),
+      createdAt: new Date(message.created_at),
+      type: message.type,
+      position: message.position,
+      streamVersion: message.stream_version
+    }
+  }
 }
 
 /**
@@ -877,56 +926,6 @@ function handlePotentialConcurrencyError(
 function throwIfErrorCode(version: number) {
   if (version === AppendResultCodes.ConcurrencyIssue) {
     throw new ConcurrencyError()
-  }
-}
-
-/**
- * Maps the read stream DB result to the proper result.
- *
- * @param messages
- * @param streamInfo
- * @param forward
- */
-function mapReadStreamResult(
-  messages: any[],
-  streamInfo: any,
-  isEnd: boolean,
-  forward: boolean
-): ReadStreamResult {
-  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null
-  return {
-    streamId: streamInfo.id,
-    streamVersion: streamInfo.stream_version,
-    streamPosition: streamInfo.position,
-    streamType: streamInfo.stream_type,
-    nextVersion: forward
-      ? (lastMessage
-          ? isEnd
-            ? streamInfo.stream_version
-            : lastMessage.stream_version
-          : streamInfo.stream_version) + 1
-      : Math.max(0, (isEnd ? 0 : lastMessage.stream_version) - 1),
-    isEnd: isEnd,
-    messages: messages.map(mapMessageResult)
-  } as ReadStreamResult
-}
-
-/**
- * Maps a Message result.
- *
- * @param streamType
- * @param message
- */
-function mapMessageResult(message: any): StreamMessage {
-  return {
-    streamId: message.stream_id,
-    messageId: message.message_id,
-    data: message.data,
-    meta: message.meta,
-    createdAt: message.created_at,
-    type: message.type,
-    position: message.position,
-    streamVersion: message.stream_version
   }
 }
 

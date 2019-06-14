@@ -195,9 +195,7 @@ export function createStreamSubscription(
         .then(() => null)
         .catch((err: Error) => {
           logger.error(
-            `Error processing message (id: ${msg.messageId}, type: ${
-              msg.type
-            }), dropping subscription.`,
+            `Error processing message (id: ${msg.messageId}, type: ${msg.type}), dropping subscription.`,
             err
           )
           return err
