@@ -23,9 +23,7 @@ export function createPostgresStreamStoreBootstrapper(
      */
     bootstrap() {
       logger.trace(
-        `Bootstrapping a Snicket database in ${
-          config.pg.database
-        } with schema name ${config.pg.schema}`
+        `Bootstrapping a Snicket database in ${config.pg.database} with schema name ${config.pg.schema}`
       )
       return dropDatabaseIfTest()
         .then(() => createDbIfNotExist())

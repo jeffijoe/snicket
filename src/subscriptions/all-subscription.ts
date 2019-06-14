@@ -185,9 +185,7 @@ export function createAllSubscription(
       config.maxCountPerRead!
     )
     logger.trace(
-      `all-subscription: pulled messages (result.nextPosition: ${
-        result.nextPosition
-      })`
+      `all-subscription: pulled messages (result.nextPosition: ${result.nextPosition})`
     )
     return result
   }
@@ -206,9 +204,7 @@ export function createAllSubscription(
         .then(() => null)
         .catch((err: Error) => {
           logger.error(
-            `Error processing message (id: ${msg.messageId}, type: ${
-              msg.type
-            }), dropping subscription.`,
+            `Error processing message (id: ${msg.messageId}, type: ${msg.type}), dropping subscription.`,
             err
           )
           return err

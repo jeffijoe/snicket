@@ -1,8 +1,12 @@
 import { replaceSchema } from './utils/query-util'
 import format from 'pg-format'
 import { NewStreamMessage } from '../types/messages'
+import { MessageDataSerializer } from '../types/serialization'
 
-export function createScripts(schema?: string) {
+export function createScripts(
+  schema: string | undefined,
+  serializer: MessageDataSerializer
+) {
   return {
     append: (
       streamId: string,
@@ -20,7 +24,7 @@ export function createScripts(schema?: string) {
         expectedVersion,
         metaStreamId,
         serializeDate(createdAt),
-        serializeMessages(newMessages)
+        serializeMessages(newMessages, serializer)
       ),
     setStreamMetadata: (
       streamId: string,
@@ -42,7 +46,7 @@ export function createScripts(schema?: string) {
         maxAge || 0,
         maxCount || 0,
         serializeDate(createdAt),
-        serializeMessage(message)
+        serializeMessage(message, serializer)
       ),
     listStreams: (maxCount: number, afterInternalId: string) =>
       format(
@@ -114,7 +118,7 @@ export function createScripts(schema?: string) {
         expectedVersion,
         deletedStreamId,
         serializeDate(createdAt),
-        serializeMessage(deletedStreamMessage)
+        serializeMessage(deletedStreamMessage, serializer)
       ),
     getScavengableStreamMessageIds: (
       streamId: string,
@@ -142,8 +146,13 @@ export function createScripts(schema?: string) {
  *
  * @param messages
  */
-function serializeMessages(messages: NewStreamMessage[]) {
-  return `ARRAY[${messages.map(serializeMessage).join(',')}]`
+function serializeMessages(
+  messages: NewStreamMessage[],
+  serializer: MessageDataSerializer
+) {
+  return `ARRAY[${messages
+    .map(m => serializeMessage(m, serializer))
+    .join(',')}]`
 }
 
 /**
@@ -151,13 +160,16 @@ function serializeMessages(messages: NewStreamMessage[]) {
  *
  * @param message
  */
-function serializeMessage(message: NewStreamMessage) {
+function serializeMessage(
+  message: NewStreamMessage,
+  serializer: MessageDataSerializer
+) {
   return format(
     `(%L::uuid,%L,%L,%L)`,
     message.messageId,
     message.type,
-    message.data,
-    message.meta || {}
+    serializer.serialize(message.data),
+    serializer.serialize(message.meta || {})
   )
 }
 

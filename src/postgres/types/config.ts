@@ -1,4 +1,5 @@
 import { Logger } from '../../types/logger'
+import { MessageDataSerializer } from '../../types/serialization'
 
 /**
  * Config for the Postgres Stream Store.
@@ -34,6 +35,11 @@ export interface PgStreamStoreConfig {
    * Logger.
    */
   logger?: Logger
+  /**
+   * Serializer to use. All data is stored as JSON, but you can plug in your own serializer for this,
+   * like if you wanted to revive dates as actual `Date` instances.
+   */
+  serializer?: MessageDataSerializer
   /**
    * Used when inserting messages to figure out what the time is.
    * If it returns `null`, the DB server time in UTC is used.

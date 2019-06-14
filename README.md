@@ -445,6 +445,42 @@ const store = createPostgresStreamStore({
 })
 ```
 
+# Serialization
+
+In the Postgres implementation, **message data and metadata** are stored as `jsonb`, and the default serializer simply uses `JSON.parse` and `JSON.stringify`.
+
+```ts
+import { jsonSerializer } from 'snicket'
+
+const store = createPostgresStreamStore({
+  pg: { /*...*/ },
+  serializer: jsonSerializer // This is the default.
+})
+```
+
+It's essentially this:
+
+```ts
+const jsonSerializer = {
+  serialize: JSON.stringify,
+  deserialize: JSON.parse
+}
+```
+
+You can create another JSON serializer that also revives `ISO-8601` date strings into `Date` instances.
+
+```ts
+import { createJsonSerializer } from 'snicket'
+
+const store = createPostgresStreamStore({
+  pg: { /*...*/ },
+  // This will deserialize all date fields as `Date` instances.
+  serializer: createJsonSerializer({ reviveDates: true })
+})
+```
+
+You can also plug in any other serialization format that will result in a string.
+
 # Logging
 
 By default, logs are being sent into a black hole using the `noopLogger`. You can use the console logger if you want some more insight.
