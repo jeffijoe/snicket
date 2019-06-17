@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS __schema__.message (
   position bigint NOT NULL PRIMARY KEY DEFAULT nextval('__schema__.message_seq'),
   created_at timestamp with time zone NOT NULL DEFAULT (now() at time zone 'utc'),
   type text NOT NULL,
-  data jsonb NOT NULL,
-  meta jsonb NOT NULL DEFAULT '{}',
+  data json NOT NULL,
+  meta json NOT NULL DEFAULT '{}',
 
   CONSTRAINT message_stream_id_internal_stream_version_unique UNIQUE (stream_id_internal, stream_version),
   CONSTRAINT message_stream_id_internal_message_id_unique UNIQUE (stream_id_internal, message_id)
@@ -59,8 +59,8 @@ begin
   create type __schema__.new_stream_message as (
     message_id uuid,
     "type" text,
-    "data" jsonb,
-    meta jsonb
+    "data" json,
+    meta json
   );
   exception
   when duplicate_object
@@ -202,8 +202,8 @@ create or replace function __schema__.read_stream(
   "position" bigint,
   created_at timestamp with time zone,
   "type" text,
-  "data" jsonb,
-  meta jsonb
+  "data" json,
+  meta json
 )
 as $$
 declare
@@ -271,8 +271,8 @@ create or replace function __schema__.read_all(
     "position" bigint,
     created_at timestamp with time zone,
     "type" text,
-    "data" jsonb,
-    meta jsonb
+    "data" json,
+    meta json
 )
 as $$
 begin
