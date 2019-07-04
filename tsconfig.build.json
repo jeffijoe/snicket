@@ -4,6 +4,7 @@
   "exclude": [
     "node_modules",
     "lib",
+    "src/**/__acceptance__/*",
     "src/**/__tests__/*",
     "src/**/__tests__/*/*",
     "src/**/__helpers__/*"

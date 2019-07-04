@@ -4,7 +4,6 @@ import { v4 } from 'uuid'
 import {
   ConcurrencyError,
   DisposedError,
-  DuplicateMessageError,
   InvalidParameterError
 } from '../errors/errors'
 import { noopLogger } from '../logging/noop'
@@ -108,7 +107,7 @@ export function createPostgresStreamStore(
 
   const retryOpts: RetryOptions = {
     factor: 1.05,
-    tries: 200,
+    tries: 50,
     minTimeout: 0,
     maxTimeout: 50
   }
@@ -912,24 +911,23 @@ function handlePotentialConcurrencyError(
   expectedVersion: number,
   again: Function
 ) {
-  if (isConcurrencyUniqueConstraintViolation(error)) {
+  if (isWrongExpectedVersionError(error)) {
+    // tslint:disable-next-line:no-ex-assign
+    error = new ConcurrencyError()
     /* istanbul ignore else */
     if (expectedVersion === ExpectedVersion.Any) {
       return again(error)
     }
-
-    // tslint:disable-next-line:no-ex-assign
-    error = new ConcurrencyError()
   }
 
   return error
 }
 
 /**
- * Determines if the error is a unique constraint violation related to a concurrency issue.
+ * Determines if the error is the WrongExpectedVersion error from the sproc.
  * @param err
  */
-function isConcurrencyUniqueConstraintViolation(err: any) {
+function isWrongExpectedVersionError(err: any) {
   return err.message === 'WrongExpectedVersion'
 }
 

@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import { v4 } from 'uuid'
-import { NewStreamMessage } from '../../../types/messages'
+import { NewStreamMessage } from '../types/messages'
 
 export function generateMessages(count: number) {
   return _.range(count).map<NewStreamMessage>(i => {
