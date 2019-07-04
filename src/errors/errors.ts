@@ -8,15 +8,6 @@ export class ConcurrencyError extends MakeErrorClass(
 ) {}
 
 /**
- * Thrown when a concurrency error occurs in the store.
- */
-export class DuplicateMessageError extends MakeErrorClass() {
-  constructor(public id: string) {
-    super(`Cannot insert message with duplicate ID "${id}"`)
-  }
-}
-
-/**
  * Thrown when a resource is being/been disposed
  */
 export class DisposedError extends MakeErrorClass(

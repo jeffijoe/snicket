@@ -5,11 +5,7 @@ import { throws } from 'smid'
 import { createPostgresStreamStore, PgStreamStore } from '../pg-stream-store'
 import { v4 } from 'uuid'
 import v5 from 'uuid/v5'
-import {
-  ConcurrencyError,
-  DuplicateMessageError,
-  InvalidParameterError
-} from '../../errors/errors'
+import { ConcurrencyError, InvalidParameterError } from '../../errors/errors'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 import { createResetEvent } from '../../utils/reset-event'
 
@@ -155,18 +151,6 @@ describe('appending', () => {
         )
       )
     )
-  })
-
-  test('cannot insert duplicate messages', async () => {
-    const streamId = v4()
-    const messages = generateMessages(10)
-    await store.appendToStream(streamId, ExpectedVersion.Any, messages)
-
-    const err = await throws<DuplicateMessageError>(
-      store.appendToStream(streamId, ExpectedVersion.Any, messages)
-    )
-
-    expect(err.id).toBe(messages[0].messageId)
   })
 
   test('can append with ExpectedVersion.Any in parallel without fail', async () => {

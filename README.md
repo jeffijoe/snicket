@@ -425,6 +425,62 @@ createPostgresStreamStore({
 })
 ```
 
+# Idempotency
+
+Similar to SqlStreamStore and EventStore, Snicket is idempotent when appending messages with the same ID, if and only if certain conditions are met.
+
+This is very useful when using deterministic message IDs (`node-uuid`'s `v5`!)
+
+## Idempotency for `ExpectedVersion.Any`
+
+If the specified messages have been previously written in the same order they appear in the append request, no new messages are written. 
+If the message ordering is different, or if there are additional new messages with the previous written ones, then a `ConcurrencyError` is thrown. 
+
+Examples:
+
+```ts
+const streamId = v4()
+const messages = generateMessages(5)
+
+// Idempotent
+await store.appendToStream(streamId, ExpectedVersion.Any, messages)
+await store.appendToStream(streamId, ExpectedVersion.Any, messages.slice(2))
+await store.appendToStream(streamId, ExpectedVersion.Any, messages.slice(0, 2))
+
+// Not idempotent, partial previous write mixed with a new write
+await store.appendToStream(streamId, ExpectedVersion.Any, [...messages, ...generateMessages(2) ])  // throws ConcurrencyError
+
+// Not idempotent, different ID
+await store.appendToStream(streamId, ExpectedVersion.Any, messages)
+messages[2].message_id = v4()
+await store.appendToStream(streamId, ExpectedVersion.Any, messages) // throws ConcurrencyError
+```
+
+## Idempotency when specifying an explicit version
+
+If the specified messages have been previously written in the same order they appear in the append request, no new messages are written.
+
+Examples:
+
+```ts
+const streamId = v4()
+const messages = generateMessages(4)
+
+// Create the stream
+await store.appendToStream(streamId, ExpectedVersion.Empty, messages.slice(0, 3))
+
+// Idempotent
+await store.appendToStream(streamId, ExpectedVersion.Empty, messages.slice(0, 3))
+await store.appendToStream(streamId, 0, [messages[1]])
+await store.appendToStream(streamId, 1, [messages[2]])
+
+// Not idempotent, ordering screwed up
+await store.appendToStream(streamId, ExpectedVersion.Empty, [...messages].reverse())  // throws ConcurrencyError
+
+// Not idempotent, partial previous write
+await store.appendToStream(streamId, 1, [...messages.slice(2), ...generateMessages(2)])
+```
+
 # Gap Detection
 
 During high load, it is natural for sequence gaps to occur in RDBMSes as transactions are rolled back due to conflicts. This is one way of gaps forming, and is harmless.

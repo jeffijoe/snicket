@@ -166,7 +166,6 @@ export function createPostgresStreamStore(
           truncate_before
         } = await insertMessages(streamId, expectedVersion, newMessages)
 
-        throwIfErrorCode(current_version)
         return {
           streamPosition: current_position,
           streamVersion: current_version,
@@ -468,26 +467,33 @@ export function createPostgresStreamStore(
         truncateBefore:
           typeof opts.truncateBefore === 'number' ? opts.truncateBefore : null
       }
-      const result = await runInTransaction(pool, trx => {
-        return trx
-          .query(
-            scripts.setStreamMetadata(
-              streamId,
-              metaStreamId,
-              expectedVersion,
-              opts.maxAge || null,
-              opts.maxCount || null,
-              getCurrentTime(),
-              {
-                data,
-                messageId: v4(),
-                type: OperationalMessageType.Metadata
-              }
-            )
-          )
-          .then(x => x.rows[0])
-      })
-      throwIfErrorCode(result.current_version)
+
+      const retryableSetStreamMetadata = async (again: Function) => {
+        try {
+          return await runInTransaction(pool, trx => {
+            return trx
+              .query(
+                scripts.setStreamMetadata(
+                  streamId,
+                  metaStreamId,
+                  expectedVersion,
+                  opts.maxAge || null,
+                  opts.maxCount || null,
+                  getCurrentTime(),
+                  {
+                    data,
+                    messageId: v4(),
+                    type: OperationalMessageType.Metadata
+                  }
+                )
+              )
+              .then(x => x.rows[0])
+          })
+        } catch (error) {
+          throw handlePotentialConcurrencyError(error, expectedVersion, again)
+        }
+      }
+      const result = await retry(retryableSetStreamMetadata, retryOpts)
       await maybeScavenge(
         streamId,
         data.maxAge,
@@ -517,7 +523,7 @@ export function createPostgresStreamStore(
     try {
       const retryableDeleteStream = async (again: Function) => {
         try {
-          const result = await runInTransaction(pool, trx =>
+          await runInTransaction(pool, trx =>
             trx.query(
               scripts.deleteStream(
                 streamId,
@@ -532,7 +538,6 @@ export function createPostgresStreamStore(
               )
             )
           ).then(r => r.rows[0].delete_stream)
-          throwIfErrorCode(result)
         } catch (error) {
           throw handlePotentialConcurrencyError(error, expectedVersion, again)
         }
@@ -726,6 +731,10 @@ export function createPostgresStreamStore(
             newMessages
           )
         )
+        .then(x => {
+          // console.log(x.rows)
+          return x
+        })
         .then(x => x.rows[0])
     })
   }
@@ -911,22 +920,9 @@ function handlePotentialConcurrencyError(
 
     // tslint:disable-next-line:no-ex-assign
     error = new ConcurrencyError()
-  } else if (isDuplicateMessageIdUniqueConstraintViolation(error)) {
-    return new DuplicateMessageError(
-      extractUuidKeyFromConstraintViolationError(error)
-    )
   }
 
   return error
-}
-
-/**
- * Throws if the specified version is an error code.
- */
-function throwIfErrorCode(version: number) {
-  if (version === AppendResultCodes.ConcurrencyIssue) {
-    throw new ConcurrencyError()
-  }
 }
 
 /**
@@ -934,39 +930,7 @@ function throwIfErrorCode(version: number) {
  * @param err
  */
 function isConcurrencyUniqueConstraintViolation(err: any) {
-  return (
-    err.message.endsWith('"stream_id_key"') ||
-    err.message.endsWith('"message_stream_id_internal_stream_version_unique"')
-  )
-}
-
-/**
- * Determines if the error is a unique constraint violation related to a concurrency issue.
- * @param err
- */
-function isDuplicateMessageIdUniqueConstraintViolation(err: any) {
-  return err.message.endsWith('"message_stream_id_internal_message_id_unique"')
-}
-
-/**
- * Extracts the offending duplicate key from a UCV error.
- *
- * @param err
- */
-function extractUuidKeyFromConstraintViolationError(err: any): string {
-  const result = Array.from(
-    /=\((.*?)\)/g.exec(err.detail) || /* istanbul ignore next */ []
-  )
-
-  /* istanbul ignore next */
-  if (result.length < 2) {
-    return '[unable to parse]'
-  }
-
-  // It might be a single UUID or it might be a composite.
-  // Splitting on the comma and taking the last value will do the trick.
-  const splat = result[1].split(', ')
-  return splat[splat.length - 1]
+  return err.message === 'WrongExpectedVersion'
 }
 
 /**
@@ -986,11 +950,4 @@ interface InsertResult {
   max_count: number | null
   max_age: number | null
   truncate_before: number | null
-}
-
-/**
- * Special `version` codes returned from the append sproc.
- */
-enum AppendResultCodes {
-  ConcurrencyIssue = -9
 }
