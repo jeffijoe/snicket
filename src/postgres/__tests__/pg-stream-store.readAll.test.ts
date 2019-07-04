@@ -4,7 +4,7 @@ import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 import { createPostgresStreamStoreBootstrapper } from '../setup/bootstrapper'
 import { readAllTestsFor } from '../../__acceptance__/stream-store.readAll.test'
 
-let cfg: PgStreamStoreConfig = {
+const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
   pg: {
     ...streamStoreCfg.pg,

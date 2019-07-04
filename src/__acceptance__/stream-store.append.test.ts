@@ -5,7 +5,7 @@ import {
 } from '../types/stream-store'
 import { v4 } from 'uuid'
 import v5 from 'uuid/v5'
-import { InvalidParameterError, ConcurrencyError } from '..'
+import { InvalidParameterError, WrongExpectedVersionError } from '..'
 import { createResetEvent } from '../utils/reset-event'
 import _ from 'lodash'
 import { throws } from 'smid'
@@ -48,7 +48,7 @@ export function appendTestFor(
       ).rejects.toBeInstanceOf(InvalidParameterError)
     })
 
-    test('throws concurrency error when creating the stream', async () => {
+    test('throws wrong expected version error when creating the stream', async () => {
       const streamId = v5('Wow', v4())
       let result: AppendToStreamResult = null!
       const setResult = (r: AppendToStreamResult) => (result = r)
@@ -69,11 +69,11 @@ export function appendTestFor(
             )
             .then(setResult)
         ])
-      ).rejects.toBeInstanceOf(ConcurrencyError)
+      ).rejects.toBeInstanceOf(WrongExpectedVersionError)
       expect(result.streamVersion).toBe(1)
     })
 
-    test('throws concurrency error when adding messages', async () => {
+    test('throws wrong expected version error when adding messages', async () => {
       const streamId = v4()
       let result = await store.appendToStream(
         streamId,
@@ -91,11 +91,11 @@ export function appendTestFor(
             .appendToStream(streamId, result.streamVersion, generateMessages(2))
             .then(setResult)
         ])
-      ).rejects.toBeInstanceOf(ConcurrencyError)
+      ).rejects.toBeInstanceOf(WrongExpectedVersionError)
       expect(result.streamVersion).toBe(6)
     })
 
-    test('throws concurrency error when adding messages many times in parallel', async () => {
+    test('throws wrong expected version error when adding messages many times in parallel', async () => {
       const streamId = v4()
       let result = await store.appendToStream(
         streamId,
@@ -118,9 +118,9 @@ export function appendTestFor(
               .then(succeeded.set)
           )
         )
-      ).rejects.toBeInstanceOf(ConcurrencyError)
+      ).rejects.toBeInstanceOf(WrongExpectedVersionError)
       // There's a race condition which is fine in real code but causes the test to fail in like a 1/100 chance.
-      // Basically, if a concurrency error is caught before one of the concurrently running appends succeed (and one will!),
+      // Basically, if a wrong expected version error is caught before one of the concurrently running appends succeed (and one will!),
       // we reach this point but the succeeding append hasn't updated the result yet.
       // That's why we are using this little trick with the reset event.
       await succeeded.wait()

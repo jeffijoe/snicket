@@ -1,9 +1,6 @@
 import { createPostgresStreamStoreBootstrapper } from '../setup/bootstrapper'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 import { createPostgresStreamStore } from '../pg-stream-store'
-import { v4 } from 'uuid'
-import { ExpectedVersion } from '../../types/stream-store'
-import { generateMessages } from '../../__helpers__/message-helper'
 import { PgStreamStoreConfig } from '../types/config'
 import { readHeadPositionTestsFor } from '../../__acceptance__/stream-store.readHeadPosition.test'
 

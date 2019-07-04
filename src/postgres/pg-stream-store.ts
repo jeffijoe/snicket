@@ -2,9 +2,9 @@ import BigInteger from 'big-integer'
 import { retry, RetryOptions } from 'fejl'
 import { v4 } from 'uuid'
 import {
-  ConcurrencyError,
   DisposedError,
-  InvalidParameterError
+  InvalidParameterError,
+  WrongExpectedVersionError
 } from '../errors/errors'
 import { noopLogger } from '../logging/noop'
 import { createMetadataCache } from '../meta/metadata-cache'
@@ -12,6 +12,7 @@ import { jsonSerializer } from '../serialization/json'
 import { createAllSubscription } from '../subscriptions/all-subscription'
 import { createPollingNotifier } from '../subscriptions/polling-notifier'
 import { createStreamSubscription } from '../subscriptions/stream-subscription'
+import { MAX_BIG_VALUE } from '../types/big-int'
 import {
   MessagePosition,
   NewStreamMessage,
@@ -59,11 +60,6 @@ import { PgStreamStoreConfig, ReadingConfig } from './types/config'
  * Postgres Stream Store.
  */
 export interface PgStreamStore extends StreamStore {}
-
-/**
- * Max bigint value.
- */
-const MAX_BIG_VALUE = BigInteger('9223372036854775807').toString()
 
 /**
  * Creates the Postgres Stream Store.
@@ -173,7 +169,11 @@ export function createPostgresStreamStore(
           truncateBefore: truncate_before
         }
       } catch (error) {
-        throw handlePotentialConcurrencyError(error, expectedVersion, again)
+        throw handlePotentialWrongExpectedVersionError(
+          error,
+          expectedVersion,
+          again
+        )
       }
     }
 
@@ -489,7 +489,11 @@ export function createPostgresStreamStore(
               .then(x => x.rows[0])
           })
         } catch (error) {
-          throw handlePotentialConcurrencyError(error, expectedVersion, again)
+          throw handlePotentialWrongExpectedVersionError(
+            error,
+            expectedVersion,
+            again
+          )
         }
       }
       const result = await retry(retryableSetStreamMetadata, retryOpts)
@@ -538,7 +542,11 @@ export function createPostgresStreamStore(
             )
           ).then(r => r.rows[0].delete_stream)
         } catch (error) {
-          throw handlePotentialConcurrencyError(error, expectedVersion, again)
+          throw handlePotentialWrongExpectedVersionError(
+            error,
+            expectedVersion,
+            again
+          )
         }
       }
 
@@ -906,14 +914,14 @@ export function createPostgresStreamStore(
  * @param expectedVersion
  * @param again
  */
-function handlePotentialConcurrencyError(
+function handlePotentialWrongExpectedVersionError(
   error: any,
   expectedVersion: number,
   again: Function
 ) {
   if (isWrongExpectedVersionError(error)) {
     // tslint:disable-next-line:no-ex-assign
-    error = new ConcurrencyError()
+    error = new WrongExpectedVersionError()
     /* istanbul ignore else */
     if (expectedVersion === ExpectedVersion.Any) {
       return again(error)

@@ -4,7 +4,7 @@ import {
   StreamDeleted,
   ExpectedVersion,
   ReadDirection,
-  ConcurrencyError
+  WrongExpectedVersionError
 } from '..'
 import { v4 } from 'uuid'
 import { generateMessages } from '../__helpers__/message-helper'
@@ -75,6 +75,6 @@ export function deleteStreamTestFor(
     )
     await expect(
       store.deleteStream(streamId, result.streamVersion - 1)
-    ).rejects.toBeInstanceOf(ConcurrencyError)
+    ).rejects.toBeInstanceOf(WrongExpectedVersionError)
   })
 }

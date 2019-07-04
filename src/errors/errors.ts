@@ -1,9 +1,9 @@
 import { MakeErrorClass } from 'fejl'
 
 /**
- * Thrown when a concurrency error occurs in the store.
+ * Thrown when a wrong expected version error occurs in the store.
  */
-export class ConcurrencyError extends MakeErrorClass(
+export class WrongExpectedVersionError extends MakeErrorClass(
   'The expected version did not match that of the store.'
 ) {}
 

@@ -2,7 +2,8 @@ import { throws } from 'smid'
 import { StreamStore, ExpectedVersion } from '..'
 import { v4 } from 'uuid'
 import { generateMessages } from '../__helpers__/message-helper'
-import { ConcurrencyError } from '../errors/errors'
+import { WrongExpectedVersionError } from '../errors/errors'
+import { Position } from '../types/messages'
 
 export function idempotencyTestsFor(
   getStore: () => Promise<StreamStore>,
@@ -71,6 +72,39 @@ export function idempotencyTestsFor(
   })
 
   describe('ExpectedVersion.Any', () => {
+    test('has the same idempotence guarantees as SqlStreamStore', async () => {
+      const [m1, m2, m3, m4] = generateMessages(4)
+      const streamId = v4()
+
+      // Create stream
+      await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2, m3])
+
+      // Idempotent appends
+      await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2, m3])
+      await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2])
+      await store.appendToStream(streamId, ExpectedVersion.Any, [m2, m3])
+      await store.appendToStream(streamId, ExpectedVersion.Any, [m3])
+
+      expect(
+        await store
+          .readStream(streamId, Position.Start, 10)
+          .then(x => x.messages.length)
+      ).toBe(3)
+
+      await throws(
+        store.appendToStream(streamId, ExpectedVersion.Any, [m2, m1, m3])
+      )
+      await throws(
+        store.appendToStream(streamId, ExpectedVersion.Any, [m3, m4])
+      )
+
+      expect(
+        await store
+          .readStream(streamId, Position.Start, 10)
+          .then(x => x.messages.length)
+      ).toBe(3)
+    })
+
     test('is idempotent when the exact same messages are passed', async () => {
       const streamId = v4()
       await store.appendToStream(
@@ -150,11 +184,42 @@ export function idempotencyTestsFor(
         ])
       )
 
-      expect(err).toBeInstanceOf(ConcurrencyError)
+      expect(err).toBeInstanceOf(WrongExpectedVersionError)
     })
   })
 
   describe('stream version', () => {
+    test('has the same idempotence guarantees as SqlStreamStore', async () => {
+      const [m1, m2, m3, m4] = generateMessages(4)
+      const streamId = v4()
+
+      // Create stream
+      await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2, m3])
+
+      // Idempotent appends
+      await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2, m3])
+      await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2])
+      await store.appendToStream(streamId, 0, [m2, m3])
+      await store.appendToStream(streamId, 1, [m3])
+
+      expect(
+        await store
+          .readStream(streamId, Position.Start, 10)
+          .then(x => x.messages.length)
+      ).toBe(3)
+
+      await throws(
+        store.appendToStream(streamId, ExpectedVersion.Empty, [m2, m1, m3])
+      )
+      await throws(store.appendToStream(streamId, 1, [m3, m4]))
+
+      expect(
+        await store
+          .readStream(streamId, Position.Start, 10)
+          .then(x => x.messages.length)
+      ).toBe(3)
+    })
+
     test('is idempotent when the exact same messages are passed', async () => {
       const streamId = v4()
       const firstResult = await store.appendToStream(
@@ -231,7 +296,7 @@ export function idempotencyTestsFor(
       let err = await throws(
         store.appendToStream(streamId, firstResult.streamVersion + 1, messages)
       )
-      expect(err).toBeInstanceOf(ConcurrencyError)
+      expect(err).toBeInstanceOf(WrongExpectedVersionError)
       err = await throws(
         store.appendToStream(
           streamId,
@@ -239,7 +304,7 @@ export function idempotencyTestsFor(
           [...messages].reverse()
         )
       )
-      expect(err).toBeInstanceOf(ConcurrencyError)
+      expect(err).toBeInstanceOf(WrongExpectedVersionError)
     })
 
     test('is not idempotent when there is overlap', async () => {
@@ -259,7 +324,7 @@ export function idempotencyTestsFor(
           ...generateMessages(1)
         ])
       )
-      expect(err).toBeInstanceOf(ConcurrencyError)
+      expect(err).toBeInstanceOf(WrongExpectedVersionError)
     })
   })
 }

@@ -7,7 +7,7 @@ It features the following:
 - Hydrating an aggregate from an event stream
 - Writing new events to an event stream
 - Basic business invariants in the "domain" code
-- Retrying on concurrency errors
+- Retrying on wrong expected version errors
 - **Projecting to a Postgres database** with checkpointing
 - Graceful shutdown (drain writes before shutting down)
 

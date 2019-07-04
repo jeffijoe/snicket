@@ -12,6 +12,31 @@ Useful for Event Sourcing.
 [![npm](https://img.shields.io/npm/dt/snicket.svg?maxAge=1000)](https://www.npmjs.com/package/snicket)
 [![npm](https://img.shields.io/npm/l/snicket.svg?maxAge=1000)](https://github.com/jeffijoe/snicket/blob/master/LICENSE.md)
 
+# Table of Contents
+
+   * [Snicket](#snicket)
+   * [Installing](#installing)
+   * [Setting it up](#setting-it-up)
+   * [Quick Start](#quick-start)
+   * [Concepts](#concepts)
+   * [Appending](#appending)
+   * [Reading](#reading)
+      * [Filtering Expired Messages](#filtering-expired-messages)
+      * [Listing Streams](#listing-streams)
+   * [Stream Metadata](#stream-metadata)
+   * [Scavenging](#scavenging)
+   * [Subscriptions](#subscriptions)
+      * [Subscribing to a stream](#subscribing-to-a-stream)
+      * [Subscribing to the all-stream](#subscribing-to-the-all-stream)
+      * [Notifiers](#notifiers)
+   * [Idempotency](#idempotency)
+      * [Idempotency for ExpectedVersion.Any](#idempotency-for-expectedversionany)
+      * [Idempotency when specifying an explicit version](#idempotency-when-specifying-an-explicit-version)
+   * [Gap Detection](#gap-detection)
+   * [Serialization](#serialization)
+   * [Logging](#logging)
+   * [About](#about)
+
 # Installing
 
 Get it on npm:
@@ -175,10 +200,10 @@ await store.appendToStream(
 )
 ```
 
-If there's an expected-version mismatch, a `ConcurrencyError` is thrown.
+If there's an expected-version mismatch, a `WrongExpectedVersionError` is thrown.
 
 ```ts
-import { ConcurrencyError } from 'snicket'
+import { WrongExpectedVersionError } from 'snicket'
 
 await store.appendToStream(
   'account-123',
@@ -193,7 +218,7 @@ await store.appendToStream(
     }
   }]
 ).catch(err => {
-  console.error(err) // ConcurrencyError: ...
+  console.error(err) // WrongExpectedVersionError: ...
 })
 ```
 
@@ -434,51 +459,60 @@ This is very useful when using deterministic message IDs (`node-uuid`'s `v5`!)
 ## Idempotency for `ExpectedVersion.Any`
 
 If the specified messages have been previously written in the same order they appear in the append request, no new messages are written. 
-If the message ordering is different, or if there are additional new messages with the previous written ones, then a `ConcurrencyError` is thrown. 
+If the message ordering is different, or if there are additional new messages with the previous written ones, then a `WrongExpectedVersionError` is thrown. 
 
 Examples:
 
 ```ts
+const [m1, m2, m3, m4] = generateMessages(4)
 const streamId = v4()
-const messages = generateMessages(5)
 
-// Idempotent
-await store.appendToStream(streamId, ExpectedVersion.Any, messages)
-await store.appendToStream(streamId, ExpectedVersion.Any, messages.slice(2))
-await store.appendToStream(streamId, ExpectedVersion.Any, messages.slice(0, 2))
+// Create stream
+await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2, m3])
 
-// Not idempotent, partial previous write mixed with a new write
-await store.appendToStream(streamId, ExpectedVersion.Any, [...messages, ...generateMessages(2) ])  // throws ConcurrencyError
+// Idempotent appends
+await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2, m3])
+await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2])
+await store.appendToStream(streamId, ExpectedVersion.Any, [m2, m3])
+await store.appendToStream(streamId, ExpectedVersion.Any, [m3])
 
-// Not idempotent, different ID
-await store.appendToStream(streamId, ExpectedVersion.Any, messages)
-messages[2].message_id = v4()
-await store.appendToStream(streamId, ExpectedVersion.Any, messages) // throws ConcurrencyError
+// Not idempotent, different order
+await throws(
+  store.appendToStream(streamId, ExpectedVersion.Any, [m2, m1, m3])
+)
+// Not idempotent, partial previous write (m3) and a new write (m4)
+await throws(
+  store.appendToStream(streamId, ExpectedVersion.Any, [m3, m4])
+)
+
 ```
 
 ## Idempotency when specifying an explicit version
 
-If the specified messages have been previously written in the same order they appear in the append request, no new messages are written.
+If the specified messages have been previously written in the same order they appear in the append request starting at the expected version, 
+no new messages are written.
 
 Examples:
 
 ```ts
+const [m1, m2, m3, m4] = generateMessages(4)
 const streamId = v4()
-const messages = generateMessages(4)
 
-// Create the stream
-await store.appendToStream(streamId, ExpectedVersion.Empty, messages.slice(0, 3))
+// Create stream
+await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2, m3])
 
-// Idempotent
-await store.appendToStream(streamId, ExpectedVersion.Empty, messages.slice(0, 3))
-await store.appendToStream(streamId, 0, [messages[1]])
-await store.appendToStream(streamId, 1, [messages[2]])
+// Idempotent appends
+await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2, m3])
+await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2])
+await store.appendToStream(streamId, 0, [m2, m3])
+await store.appendToStream(streamId, 1, [m3])
 
-// Not idempotent, ordering screwed up
-await store.appendToStream(streamId, ExpectedVersion.Empty, [...messages].reverse())  // throws ConcurrencyError
-
-// Not idempotent, partial previous write
-await store.appendToStream(streamId, 1, [...messages.slice(2), ...generateMessages(2)])
+// Not idempotent, different order
+await throws(
+  store.appendToStream(streamId, ExpectedVersion.Empty, [m2, m1, m3])
+)
+// Not idempotent, partial previous write (m3) and a new write (m4)
+await throws(store.appendToStream(streamId, 1, [m3, m4]))
 ```
 
 # Gap Detection

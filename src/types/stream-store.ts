@@ -81,7 +81,7 @@ export interface StreamStore {
    * @param expectedVersion
    * @param newMessages
    * @throws {DuplicateMessageError}
-   * @throws {ConcurrencyError}
+   * @throws {WrongExpectedVersionError}
    * @throws {InconsistentStreamError}
    */
   appendToStream(

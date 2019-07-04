@@ -1,4 +1,4 @@
-import { StreamStore, ExpectedVersion, ConcurrencyError } from '..'
+import { StreamStore, ExpectedVersion, WrongExpectedVersionError } from '..'
 import { v4 } from 'uuid'
 import { generateMessages } from '../__helpers__/message-helper'
 
@@ -46,7 +46,7 @@ export function metadataTestsFor(
 
     await expect(
       store.setStreamMetadata(streamId, ExpectedVersion.Empty, { metadata: {} })
-    ).rejects.toBeInstanceOf(ConcurrencyError)
+    ).rejects.toBeInstanceOf(WrongExpectedVersionError)
 
     await store.setStreamMetadata(streamId, setResult1.currentVersion, {
       metadata: { up: 'dated' }
