@@ -77,9 +77,6 @@ export function uuid(
   paramName: string,
   value?: string
 ): string | undefined | never {
-  check(
-    `${paramName} is not a valid UUID`,
-    () => !value || validateUUID(value, 4)
-  )
+  check(`${paramName} is not a valid UUID`, () => !value || validateUUID(value))
   return value
 }

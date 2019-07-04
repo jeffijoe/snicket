@@ -4,6 +4,7 @@ import _ from 'lodash'
 import { throws } from 'smid'
 import { createPostgresStreamStore, PgStreamStore } from '../pg-stream-store'
 import { v4 } from 'uuid'
+import v5 from 'uuid/v5'
 import {
   ConcurrencyError,
   DuplicateMessageError,
@@ -49,7 +50,7 @@ describe('appending', () => {
   })
 
   test('throws concurrency error when creating the stream', async () => {
-    const streamId = v4()
+    const streamId = v5('Wow', v4())
     let result: AppendToStreamResult = null!
     await expect(
       Promise.all([
@@ -68,7 +69,6 @@ describe('appending', () => {
     const streamId = v4()
     let result = await store.appendToStream(
       streamId,
-
       ExpectedVersion.Empty,
       generateMessages(5)
     )
