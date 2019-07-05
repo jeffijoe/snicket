@@ -9,6 +9,7 @@ import {
 import { createResetEvent } from '../utils/reset-event'
 import { DisposedError } from '../errors/errors'
 import { createDuplexLatch } from '../utils/latch'
+import * as invariant from '../utils/invariant'
 import { Logger } from '../types/logger'
 import { retry } from 'fejl'
 
@@ -35,6 +36,8 @@ export function createStreamSubscription(
   processMessage: MessageProcessor,
   cfg: StreamSubscriptionOptions & { onEstablished: Function }
 ): StreamSubscription {
+  invariant.requiredString('streamId', streamId)
+  invariant.requiredFunc('processMessage', processMessage)
   const next = createResetEvent()
   const loopLatch = createDuplexLatch()
   const disposeListener = notifier.listen(next.set)
@@ -152,11 +155,6 @@ export function createStreamSubscription(
   async function getStartVersionForStreamEnd() {
     try {
       const info = await store.readStream(streamId, 0, 1)
-      if (info.streamVersion === 0) {
-        // No/empty stream
-        return 0
-      }
-
       return info.streamVersion + 1
     } catch (error) {
       logger.error(

@@ -21,7 +21,10 @@ export function filterExpiredTest(
   })
 
   afterAll(() =>
-    Promise.all([store.dispose(), nonFilteringStore.dispose()]).then(teardown)
+    Promise.all([
+      store.dispose().catch(Boolean),
+      nonFilteringStore.dispose().catch(Boolean)
+    ]).then(teardown)
   )
 
   test('filters expired', async () => {
@@ -31,6 +34,7 @@ export function filterExpiredTest(
       ExpectedVersion.Empty,
       generateMessages(5)
     )
+
     await store.setStreamMetadata(streamId, ExpectedVersion.Empty, {
       maxAge: 5
     })
@@ -42,11 +46,17 @@ export function filterExpiredTest(
       const result = await store.readStream(streamId, 0, 200)
       return result.messages.length === 0
     })
-
     // Verify that with filtering disabled that messages get purged.
     await waitUntil(async () => {
       const result = await nonFilteringStore.readStream(streamId, 0, 200)
       return result.messages.length === 0
+    })
+    // Verify they don't appear in the all-stream
+    await waitUntil(async () => {
+      const result = await store.readAll(0, 999999)
+      return !result.messages.some(m =>
+        before.messages.some(b => b.messageId === m.messageId)
+      )
     })
   })
 }

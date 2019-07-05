@@ -35,7 +35,9 @@ Useful for Event Sourcing.
    * [Gap Detection](#gap-detection)
    * [Serialization](#serialization)
    * [Logging](#logging)
+   * [In-Memory Stream Store](#in-memory-stream-store)
    * [About](#about)
+
 
 # Installing
 
@@ -52,6 +54,9 @@ npm install pg
 ```
 
 # Setting it up
+
+> This is the setup for the Postgres implementation. 
+> There's also an [in-memory implementation](#in-memory-stream-store) if you just want to play around with it. The API is the exact same.
 
 You can either run the Snicket Postgres setup tool:
 
@@ -584,6 +589,19 @@ const store = createPostgresStreamStore({
 ```
 
 You can also create your own logger. See the implementation of the noop logger for a template.
+
+# In-Memory Stream Store
+
+There's an in-memory implementation that is useful for testing, or if you just want to play around
+without setting up a Postgres database.
+
+Naturally, being in-memory only means there's no persistence.
+
+```ts
+import { createInMemoryStreamStore } from 'snicket/lib/in-memory'
+
+const store = createInMemoryStreamStore()
+```
 
 # About
 

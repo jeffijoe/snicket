@@ -51,7 +51,11 @@ export function appendTestFor(
     test('throws wrong expected version error when creating the stream', async () => {
       const streamId = v5('Wow', v4())
       let result: AppendToStreamResult = null!
-      const setResult = (r: AppendToStreamResult) => (result = r)
+      const succeeded = createResetEvent()
+      const setResult = (r: AppendToStreamResult) => {
+        result = r
+        succeeded.set()
+      }
       await expect(
         Promise.all([
           store
@@ -70,6 +74,7 @@ export function appendTestFor(
             .then(setResult)
         ])
       ).rejects.toBeInstanceOf(WrongExpectedVersionError)
+      await succeeded.wait()
       expect(result.streamVersion).toBe(1)
     })
 
@@ -81,7 +86,11 @@ export function appendTestFor(
         generateMessages(5)
       )
       expect(result.streamVersion).toBe(4)
-      const setResult = (r: AppendToStreamResult) => (result = r)
+      const succeeded = createResetEvent()
+      const setResult = (r: AppendToStreamResult) => {
+        result = r
+        succeeded.set()
+      }
       await expect(
         Promise.all([
           store
@@ -92,6 +101,7 @@ export function appendTestFor(
             .then(setResult)
         ])
       ).rejects.toBeInstanceOf(WrongExpectedVersionError)
+      await succeeded.wait()
       expect(result.streamVersion).toBe(6)
     })
 
@@ -163,6 +173,12 @@ export function appendTestFor(
           store.appendToStream(v4(), ExpectedVersion.Any, generateMessages(10))
         )
       )
+    })
+
+    test('can create a stream with no messages', async () => {
+      const streamId = v4()
+      await store.appendToStream(streamId, ExpectedVersion.Empty, [])
+      await store.appendToStream(streamId, ExpectedVersion.Any, [])
     })
 
     test('throws an error when not passing in proper args', async () => {

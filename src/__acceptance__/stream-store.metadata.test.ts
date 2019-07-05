@@ -27,6 +27,7 @@ export function metadataTestsFor(
       streamId,
       metadata: null,
       metadataStreamVersion: -1,
+      truncateBefore: null,
       maxAge: null,
       maxCount: null
     })
@@ -67,6 +68,7 @@ export function metadataTestsFor(
       {
         maxAge: 60,
         maxCount: 50,
+        truncateBefore: 5,
         metadata: {}
       }
     )
@@ -79,6 +81,7 @@ export function metadataTestsFor(
       metadataStreamVersion: 0,
       maxAge: 60,
       maxCount: 50,
+      truncateBefore: 5,
       metadata: {}
     })
 
@@ -99,6 +102,7 @@ export function metadataTestsFor(
       metadataStreamVersion: 1,
       maxAge: null,
       maxCount: null,
+      truncateBefore: null,
       metadata: {}
     })
   })

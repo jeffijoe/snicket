@@ -11,83 +11,120 @@ export function readAllTestsFor(
   let store: StreamStore
   beforeAll(async () => {
     store = await getStore()
-    await store.appendToStream(
-      streamId1,
-      ExpectedVersion.Any,
-      generateMessages(10)
-    )
-    await store.appendToStream(
-      streamId2,
-      ExpectedVersion.Any,
-      generateMessages(10)
-    )
   })
 
   afterAll(() => store.dispose().then(teardown))
 
-  test('reads all messages', async () => {
-    const result1 = await store.readAll('0', 10)
-    expect(result1.isEnd).toBe(false)
-    expect(result1.nextPosition).toBe('10')
-    expect(result1.messages.length).toBe(10)
+  test('empty', async () => {
+    expect(
+      await store.readAll(Position.Start, 10, ReadDirection.Forward)
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextPosition: '0'
+    })
 
-    const result2 = await store.readAll(result1.nextPosition, 10)
-    expect(result2.isEnd).toBe(true)
-    expect(result2.nextPosition).toBe('20')
-    expect(result2.messages.length).toBe(10)
+    expect(
+      await store.readAll(Position.Start, 10, ReadDirection.Backward)
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextPosition: '-1'
+    })
 
-    const allResult = await store.readAll('0', 1000)
-    expect(allResult.isEnd).toBe(true)
-    expect(allResult.messages).toEqual([
-      ...result1.messages,
-      ...result2.messages
-    ])
+    // Empty stream or no stream, should be the same result.
+    await store.appendToStream(v4(), ExpectedVersion.Empty, [])
 
-    const theEnd = await store.readAll(allResult.nextPosition, 10)
-    expect(theEnd.isEnd).toBe(true)
-    expect(theEnd.messages).toEqual([])
+    expect(
+      await store.readAll(Position.Start, 10, ReadDirection.Forward)
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextPosition: '0'
+    })
+
+    expect(
+      // Note, using Position.End here is intentional, the end
+      // result should be the same but different code paths might be triggered.
+      await store.readAll(Position.End, 10, ReadDirection.Backward)
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextPosition: '-1'
+    })
   })
 
-  test('can read backwards', async () => {
-    const result1 = await store.readAll(
-      Position.End,
-      10,
-      ReadDirection.Backward
-    )
-    expect(result1.isEnd).toBe(false)
-    expect(result1.nextPosition).toBe('9')
-    expect(result1.messages.length).toBe(10)
+  describe('reading all messages', () => {
+    beforeAll(async () => {
+      await store.appendToStream(
+        streamId1,
+        ExpectedVersion.Any,
+        generateMessages(10)
+      )
+      await store.appendToStream(
+        streamId2,
+        ExpectedVersion.Any,
+        generateMessages(10)
+      )
+    })
 
-    const result2 = await store.readAll(
-      result1.nextPosition,
-      10,
-      ReadDirection.Backward
-    )
-    expect(result2.isEnd).toBe(true)
-    expect(result2.nextPosition).toBe('0')
-    expect(result2.messages.length).toBe(10)
+    test('reads all messages', async () => {
+      const result1 = await store.readAll('0', 10)
+      expect(result1.isEnd).toBe(false)
+      expect(result1.nextPosition).toBe('10')
+      expect(result1.messages.length).toBe(10)
 
-    const allResult = await store.readAll(
-      Position.End,
-      1000,
-      ReadDirection.Backward
-    )
-    expect(allResult.isEnd).toBe(true)
-    expect(allResult.messages).toEqual([
-      ...result1.messages,
-      ...result2.messages
-    ])
+      const result2 = await store.readAll(result1.nextPosition, 10)
+      expect(result2.isEnd).toBe(true)
+      expect(result2.nextPosition).toBe('20')
+      expect(result2.messages.length).toBe(10)
 
-    const theEnd = await store.readAll(
-      allResult.nextPosition,
-      10,
-      ReadDirection.Backward
-    )
+      const allResult = await store.readAll('0', 1000)
+      expect(allResult.isEnd).toBe(true)
+      expect(allResult.messages).toEqual([
+        ...result1.messages,
+        ...result2.messages
+      ])
 
-    expect(theEnd.isEnd).toBe(true)
+      const theEnd = await store.readAll(allResult.nextPosition, 10)
+      expect(theEnd.isEnd).toBe(true)
+      expect(theEnd.messages).toEqual([])
 
-    expect(theEnd.messages).toEqual([
-      result2.messages[result2.messages.length - 1]
-    ])
+      const afterTheEnd = await store.readAll(theEnd.nextPosition, 10)
+      expect(afterTheEnd.nextPosition).toBe(theEnd.nextPosition)
+      expect(afterTheEnd.isEnd).toBe(theEnd.isEnd)
+      expect(afterTheEnd.messages).toHaveLength(0)
+    })
+
+    test('can read backwards', async () => {
+      const result1 = await store.readAll(
+        Position.End,
+        10,
+        ReadDirection.Backward
+      )
+      expect(result1.isEnd).toBe(false)
+      expect(result1.nextPosition).toBe('9')
+      expect(result1.messages.length).toBe(10)
+
+      const result2 = await store.readAll(
+        result1.nextPosition,
+        10,
+        ReadDirection.Backward
+      )
+      expect(result2.isEnd).toBe(true)
+      expect(result2.nextPosition).toBe('-1')
+      expect(result2.messages.length).toBe(10)
+
+      const allResult = await store.readAll(
+        Position.End,
+        1000,
+        ReadDirection.Backward
+      )
+      expect(allResult.isEnd).toBe(true)
+      expect(allResult.messages).toEqual([
+        ...result1.messages,
+        ...result2.messages
+      ])
+    })
   })
 }

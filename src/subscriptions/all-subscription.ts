@@ -10,6 +10,7 @@ import { createResetEvent } from '../utils/reset-event'
 import { DisposedError } from '../errors/errors'
 import { createDuplexLatch } from '../utils/latch'
 import { Logger } from '../types/logger'
+import * as invariant from '../utils/invariant'
 import { retry } from 'fejl'
 import BigInteger from 'big-integer'
 
@@ -34,6 +35,7 @@ export function createAllSubscription(
   processMessage: MessageProcessor,
   cfg: AllSubscriptionOptions & { onEstablished: Function }
 ): AllSubscription {
+  invariant.requiredFunc('processMessage', processMessage)
   const next = createResetEvent()
   const loopLatch = createDuplexLatch()
   const disposeListener = notifier.listen(next.set)

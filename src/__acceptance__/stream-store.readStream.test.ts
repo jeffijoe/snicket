@@ -18,17 +18,61 @@ export function readStreamTestsFor(
   describe('reading a stream', () => {
     test('basic', async () => {
       const streamId = v4()
+      const resultNoStream = await store.readStream(streamId, 0, 10)
+      expect(resultNoStream).toMatchObject({
+        streamId,
+        streamVersion: -1,
+        streamPosition: '-1',
+        nextVersion: 0,
+        isEnd: true
+      })
+
+      await store.appendToStream(streamId, ExpectedVersion.Empty, [])
+      const resultEmpty = await store.readStream(streamId, 0, 10)
+      expect(resultEmpty).toMatchObject({
+        streamId,
+        streamVersion: -1,
+        streamPosition: '-1',
+        nextVersion: 0,
+        isEnd: true
+      })
+
       await store.appendToStream(
         streamId,
         ExpectedVersion.Empty,
         generateMessages(5)
       )
 
-      const result = await store.readStream(streamId, 0, 10)
-      expect(result).toMatchObject({
+      const result1 = await store.readStream(streamId, 0, 10)
+      expect(result1).toMatchObject({
         streamVersion: 4,
         streamPosition: expect.any(String),
         nextVersion: 5,
+        streamId: streamId,
+        isEnd: true,
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            streamId: streamId,
+            data: { hello: 'world', index: 0 },
+            meta: { me: 'ta' },
+            createdAt: expect.any(Date),
+            type: 'greeting',
+            position: expect.any(String)
+          })
+        ])
+      })
+
+      await store.appendToStream(
+        streamId,
+        result1.streamVersion,
+        generateMessages(5)
+      )
+
+      const result2 = await store.readStream(streamId, 0, 10)
+      expect(result2).toMatchObject({
+        streamVersion: 9,
+        streamPosition: expect.any(String),
+        nextVersion: 10,
         streamId: streamId,
         isEnd: true,
         messages: expect.arrayContaining([
@@ -98,6 +142,7 @@ export function readStreamTestsFor(
       const result = await store.readStream(streamId, 10, 10)
       expect(result.isEnd).toBe(true)
       expect(result.nextVersion).toBe(result.streamVersion + 1)
+      expect(result.messages).toHaveLength(0)
     })
   })
 
@@ -131,7 +176,7 @@ export function readStreamTestsFor(
       )
 
       expect(result2.isEnd).toBe(true)
-      expect(result2.nextVersion).toBe(0)
+      expect(result2.nextVersion).toBe(-1)
       expect(result2.messages.length).toBe(5)
       expect(result2.messages[0].streamVersion).toBe(
         result2.messages[1].streamVersion + 1
@@ -144,23 +189,102 @@ export function readStreamTestsFor(
         ReadDirection.Backward
       )
       expect(allResult.isEnd).toBe(true)
+      expect(allResult.nextVersion).toBe(-1)
       expect(allResult.messages).toEqual([
         ...result1.messages,
         ...result2.messages
       ])
+    })
+  })
 
-      const theEnd = await store.readStream(
+  test('empty', async () => {
+    const streamId = v4()
+
+    expect(
+      await store.readStream(
         streamId,
-        allResult.nextVersion,
+        Position.Start,
+        10,
+        ReadDirection.Forward
+      )
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextVersion: 0,
+      streamId,
+      streamPosition: '-1',
+      streamVersion: -1
+    })
+
+    expect(
+      await store.readStream(
+        streamId,
+        Position.Start,
         10,
         ReadDirection.Backward
       )
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextVersion: -1,
+      streamId,
+      streamPosition: '-1',
+      streamVersion: -1
+    })
 
-      expect(theEnd.isEnd).toBe(true)
+    // No Stream vs Empty should yield the same results
+    await store.appendToStream(streamId, ExpectedVersion.Empty, [])
 
-      expect(theEnd.messages).toEqual([
-        result2.messages[result2.messages.length - 1]
-      ])
+    expect(
+      await store.readStream(
+        streamId,
+        Position.Start,
+        10,
+        ReadDirection.Forward
+      )
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextVersion: 0,
+      streamId,
+      streamPosition: '-1',
+      streamVersion: -1
+    })
+    expect(
+      await store.readStream(streamId, Position.End, 10, ReadDirection.Forward)
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextVersion: 0,
+      streamId,
+      streamPosition: '-1',
+      streamVersion: -1
+    })
+
+    expect(
+      await store.readStream(
+        streamId,
+        Position.Start,
+        10,
+        ReadDirection.Backward
+      )
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextVersion: -1,
+      streamId,
+      streamPosition: '-1',
+      streamVersion: -1
+    })
+    expect(
+      await store.readStream(streamId, Position.End, 10, ReadDirection.Backward)
+    ).toEqual({
+      isEnd: true,
+      messages: [],
+      nextVersion: -1,
+      streamId,
+      streamPosition: '-1',
+      streamVersion: -1
     })
   })
 }

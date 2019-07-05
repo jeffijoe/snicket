@@ -35,6 +35,7 @@ export function subscribeToStreamTestsFor(
       afterVersion: SubscribeAt.Beginning,
       dispose: disposer
     })
+
     const messages1 = generateMessages(10)
     const appendResult = await store.appendToStream(
       streamId,
@@ -45,7 +46,6 @@ export function subscribeToStreamTestsFor(
     await store.appendToStream(streamId, appendResult.streamVersion, messages2)
 
     await waitUntil(() => processor.mock.calls.length >= 100)
-
     expect(processor).toHaveBeenCalledTimes(100)
     await store.dispose()
     expect(disposer).toHaveBeenCalledTimes(1)
@@ -82,8 +82,8 @@ export function subscribeToStreamTestsFor(
       () => later.mock.calls.length >= 90 && earlier.mock.calls.length >= 100
     )
 
-    expect(later).toHaveBeenCalledTimes(90)
     expect(earlier).toHaveBeenCalledTimes(100)
+    expect(later).toHaveBeenCalledTimes(90)
 
     // This asserts the processor was called in order.
     messages2.forEach((m, i) => {

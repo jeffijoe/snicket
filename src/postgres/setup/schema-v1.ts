@@ -578,6 +578,7 @@ declare
   _streamIdInternal int;
   _latestStreamVersion int;
   _affected int;
+  _found int;
 begin
   /**
    * Start with the concurrency control.
@@ -586,6 +587,11 @@ begin
     into _streamIdInternal
   from __schema__.stream
   where __schema__.stream.id = _streamId;
+  get diagnostics _found = row_count;
+
+  if _found = 0 then
+    return 0;
+  end if;
 
   if _expectedVersion = -1 then
     raise exception 'WrongExpectedVersion';

@@ -197,6 +197,10 @@ export interface StreamMetadataResult {
    */
   maxCount: number | null
   /**
+   * The version at which everything prior is discarded.
+   */
+  truncateBefore: number | null
+  /**
    * Custom metadata.
    */
   metadata: any | null

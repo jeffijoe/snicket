@@ -77,4 +77,8 @@ export function deleteStreamTestFor(
       store.deleteStream(streamId, result.streamVersion - 1)
     ).rejects.toBeInstanceOf(WrongExpectedVersionError)
   })
+
+  test('deleting a non-existent stream does not fail', async () => {
+    await store.deleteStream(v4(), ExpectedVersion.Empty)
+  })
 }

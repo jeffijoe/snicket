@@ -195,20 +195,29 @@ export function idempotencyTestsFor(
       expect(err).toBeInstanceOf(WrongExpectedVersionError)
     })
 
-    test('is not idempotent when there is a previous write and a new write', async () => {
+    test('is not idempotent when there is a full previous write and a new write', async () => {
       const streamId = v4()
 
       const messages = generateMessages(5)
       await store.appendToStream(streamId, ExpectedVersion.Any, messages)
 
-      const err = await throws(
-        store.appendToStream(streamId, ExpectedVersion.Any, [
-          ...messages,
-          ...generateMessages(1)
-        ])
-      )
+      expect(
+        await throws(
+          store.appendToStream(streamId, ExpectedVersion.Any, [
+            ...messages,
+            ...generateMessages(1)
+          ])
+        )
+      ).toBeInstanceOf(WrongExpectedVersionError)
 
-      expect(err).toBeInstanceOf(WrongExpectedVersionError)
+      expect(
+        await throws(
+          store.appendToStream(streamId, ExpectedVersion.Any, [
+            ...generateMessages(1),
+            ...messages
+          ])
+        )
+      ).toBeInstanceOf(WrongExpectedVersionError)
     })
   })
 
@@ -352,6 +361,34 @@ export function idempotencyTestsFor(
         ])
       )
       expect(err).toBeInstanceOf(WrongExpectedVersionError)
+    })
+
+    test('throws when using a version higher than what is there', async () => {
+      const streamId = v4()
+
+      await expect(
+        store.appendToStream(streamId, 0, generateMessages(10))
+      ).rejects.toBeInstanceOf(WrongExpectedVersionError)
+
+      await store.appendToStream(streamId, ExpectedVersion.Empty, [])
+
+      await expect(
+        store.appendToStream(streamId, 0, generateMessages(10))
+      ).rejects.toBeInstanceOf(WrongExpectedVersionError)
+    })
+
+    test('throws on duplicate IDs', async () => {
+      const streamId = v4()
+      const messages = generateMessages(2)
+      const initial = await store.appendToStream(
+        streamId,
+        ExpectedVersion.Empty,
+        messages
+      )
+
+      await expect(
+        store.appendToStream(streamId, initial.streamVersion, messages)
+      ).rejects.toBeInstanceOf(WrongExpectedVersionError)
     })
   })
 }

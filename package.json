@@ -22,7 +22,7 @@
     "test": "NODE_ENV=test npm run setup-db && NODE_ENV=test jest",
     "cover": "npm run test -- --coverage",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
-    "lint": "tslint --project tsconfig.json --fix 'src/**/*.ts' && tsc --noEmit --pretty --project tsconfig.json && prettier --write \"{src,examples}/**/*.ts\"",
+    "lint": "tslint --project tsconfig.json --format verbose --fix 'src/**/*.ts' && tsc --noEmit --pretty --project tsconfig.json && prettier --write \"{src,examples}/**/*.ts\"",
     "setup-db": "ts-node src/__helpers__/setup-db.ts",
     "semantic-release": "semantic-release"
   },
@@ -48,7 +48,7 @@
     "coveralls": "^3.0.4",
     "husky": "^3.0.0",
     "jest": "^24.8.0",
-    "lint-staged": "^9.0.2",
+    "lint-staged": "^9.1.0",
     "lodash": "^4.17.11",
     "ms": "^2.1.2",
     "pg": "^7.11.0",
