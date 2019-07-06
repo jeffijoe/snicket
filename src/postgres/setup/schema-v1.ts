@@ -222,26 +222,29 @@ begin
     Check that the amount of messages we successfully 
     appended matches the amount of messages we wanted to append.
    */
-  if (_success <> cardinality(_newMessages)) then
+  if _success <> cardinality(_newMessages) then
     if _expectedVersion = -2 then
       perform __schema__.enforce_idempotent_append(
         _streamIdInternal,
         _currentVersion - _success,
-        _newMessages
+        _newMessages,
+        _success
       );
     elseif _expectedVersion = -1 then
       perform __schema__.enforce_idempotent_append(
         _streamIdInternal,
         -1,
-        _newMessages
+        _newMessages,
+        _success
       );
     else
       perform __schema__.enforce_idempotent_append(
         _streamIdInternal,
         _currentVersion - _success,
-        _newMessages
+        _newMessages,
+        _success
       );
-      /* We can end it here because we don't need to update the stream table. */
+      /* We can end it here because we don't need to update the stream table, as no new writes should have occurred. */
       select 
         __schema__.stream.version,
         __schema__.stream.position,
@@ -290,18 +293,28 @@ $$ language plpgsql;
 create or replace function __schema__.enforce_idempotent_append(
   _streamIdInternal bigint,
   _start int,
-  _newMessages __schema__.new_stream_message []
+  _newMessages __schema__.new_stream_message [],
+  _success int
 ) returns void as $$
 declare
   _storedMessageIds uuid [];
 begin
+  /* 
+    If _start is less than 0, then the expected version is -1 which is empty.
+    Because of that, we can already check whether or not new messages were written
+    which they shouldn't have been if they reach this part of the code.
+   */
+  if _start < 0 and _success > 0 then
+    raise exception 'WrongExpectedVersion';
+  end if;
+
   _storedMessageIds := array(
     select __schema__.message.message_id
     from __schema__.message
     where __schema__.message.stream_id_internal = _streamIdInternal
       and __schema__.message.stream_version > _start
     order by __schema__.message.stream_version asc  
-    limit cardinality(_newMessages) 
+    limit cardinality(_newMessages)
   );
   
   if _storedMessageIds <> (select array(select n.message_id from unnest(_newMessages) n)) then
@@ -736,7 +749,8 @@ DROP FUNCTION IF EXISTS __schema__.read_stream_version_of_message(
 DROP FUNCTION IF EXISTS __schema__.enforce_idempotent_append(
   bigint,
   int,
-  __schema__.new_stream_message []
+  __schema__.new_stream_message [],
+  int
 ) CASCADE;
 DROP TYPE IF EXISTS __schema__.new_stream_message CASCADE;
 DROP SCHEMA __schema__;

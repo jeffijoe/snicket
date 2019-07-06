@@ -58,16 +58,24 @@ export function idempotencyTestsFor(
       )
     })
 
-    test('can include more messages as long as the entire previous write is included', async () => {
+    test('is not idempotent when there is a previous write and a new write', async () => {
       const streamId = v4()
       const messages = generateMessages(5)
 
       await store.appendToStream(streamId, ExpectedVersion.Empty, messages)
 
-      await store.appendToStream(streamId, ExpectedVersion.Empty, [
-        ...messages,
-        ...generateMessages(1)
-      ])
+      await throws(
+        store.appendToStream(streamId, ExpectedVersion.Empty, [
+          ...messages,
+          ...generateMessages(1)
+        ])
+      )
+
+      expect(
+        await store
+          .readStream(streamId, Position.Start, 100)
+          .then(x => x.messages.length)
+      ).toBe(5)
     })
   })
 
@@ -186,6 +194,22 @@ export function idempotencyTestsFor(
 
       expect(err).toBeInstanceOf(WrongExpectedVersionError)
     })
+
+    test('is not idempotent when there is a previous write and a new write', async () => {
+      const streamId = v4()
+
+      const messages = generateMessages(5)
+      await store.appendToStream(streamId, ExpectedVersion.Any, messages)
+
+      const err = await throws(
+        store.appendToStream(streamId, ExpectedVersion.Any, [
+          ...messages,
+          ...generateMessages(1)
+        ])
+      )
+
+      expect(err).toBeInstanceOf(WrongExpectedVersionError)
+    })
   })
 
   describe('stream version', () => {
@@ -212,6 +236,9 @@ export function idempotencyTestsFor(
         store.appendToStream(streamId, ExpectedVersion.Empty, [m2, m1, m3])
       )
       await throws(store.appendToStream(streamId, 1, [m3, m4]))
+      await throws(
+        store.appendToStream(streamId, 1, [generateMessages(1)[0], m3])
+      )
 
       expect(
         await store
