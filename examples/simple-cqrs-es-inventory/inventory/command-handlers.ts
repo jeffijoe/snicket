@@ -2,7 +2,7 @@ import {
   StreamStore,
   ExpectedVersion,
   NewStreamMessage,
-  ConcurrencyError
+  WrongExpectedVersionError
 } from 'snicket'
 import * as Inventory from './'
 import { readStreamToEnd, toStreamId } from '../infra/util'
@@ -12,8 +12,8 @@ export function makeCreateInventoryItemHandler(store: StreamStore) {
   return async function handleCreateInventoryItem(
     cmd: Inventory.CreateInventoryItem
   ) {
-    // Retries the whole block on concurrency errors.
-    return ConcurrencyError.retry(async () => {
+    // Retries the whole block on wrong expected version errors.
+    return WrongExpectedVersionError.retry(async () => {
       const { state: existing } = await load(store, cmd.id)
       if (existing) throw new Error('item already exists')
       const newEvents = Inventory.create(cmd)
@@ -24,8 +24,8 @@ export function makeCreateInventoryItemHandler(store: StreamStore) {
 
 export function makeRenameItemHandler(store: StreamStore) {
   return async function handleRenameItem(cmd: Inventory.RenameItem) {
-    // Retries the whole block on concurrency errors.
-    return ConcurrencyError.retry(async () => {
+    // Retries the whole block on wrong expected version errors.
+    return WrongExpectedVersionError.retry(async () => {
       const { state: existing, version } = await load(store, cmd.id)
       if (!existing) throw new Error('item does not exist')
       const newEvents = Inventory.rename(cmd)
@@ -36,8 +36,8 @@ export function makeRenameItemHandler(store: StreamStore) {
 
 export function makeCheckInHandler(store: StreamStore) {
   return async function handleCheckIn(cmd: Inventory.CheckIn) {
-    // Retries the whole block on concurrency errors.
-    return ConcurrencyError.retry(async () => {
+    // Retries the whole block on wrong expected version errors.
+    return WrongExpectedVersionError.retry(async () => {
       const { state: existing, version } = await load(store, cmd.id)
       if (!existing) throw new Error('item does not exist')
       const newEvents = Inventory.checkIn(cmd)
@@ -48,8 +48,8 @@ export function makeCheckInHandler(store: StreamStore) {
 
 export function makeRemoveHandler(store: StreamStore) {
   return async function handleRemove(cmd: Inventory.Remove) {
-    // Retries the whole block on concurrency errors.
-    return ConcurrencyError.retry(async () => {
+    // Retries the whole block on wrong expected version errors.
+    return WrongExpectedVersionError.retry(async () => {
       const { state: existing, version } = await load(store, cmd.id)
       if (!existing) throw new Error('item does not exist')
       const newEvents = Inventory.remove(cmd, existing)
@@ -60,8 +60,8 @@ export function makeRemoveHandler(store: StreamStore) {
 
 export function makeDeactivateHandler(store: StreamStore) {
   return async function handleDeactivate(cmd: Inventory.Deactivate) {
-    // Retries the whole block on concurrency errors.
-    return ConcurrencyError.retry(async () => {
+    // Retries the whole block on wrong expected version errors.
+    return WrongExpectedVersionError.retry(async () => {
       const { state: existing, version } = await load(store, cmd.id)
       if (!existing) throw new Error('item does not exist')
       const newEvents = Inventory.deactivate(cmd, existing)

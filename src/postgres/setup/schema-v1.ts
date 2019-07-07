@@ -80,8 +80,9 @@ create or replace function __schema__.append_to_stream(
 declare
   _currentVersion int;
   _streamIdInternal bigint;
-  _lastPosition bigint;
+  _currentPosition bigint;
   _maxAge int;
+  _success int;
   _maxCount int;
   _msg __schema__.new_stream_message;
 begin
@@ -89,13 +90,7 @@ begin
     _createdAt = now() at time zone 'utc';
   end if;
 
-  select
-    "id_internal", "version"
-    into _streamIdInternal, _currentVersion
-  from __schema__.stream
-  where id = _streamId;
-
-  if not found then
+  if _expectedVersion < 0 then
     /* 
       No stream yet, but we might have metadata for one, in which case we need to
       grab the maxAge and maxCount.
@@ -110,57 +105,239 @@ begin
     order by __schema__.message.stream_version desc
     limit 1;
 
+    /* Try to insert the stream record. Ignores conflicts. */
     insert into __schema__.stream(id, "version", "position", "max_age", "max_count")
     values(_streamId, -1, -1, NULLIF(_maxAge, 0), NULLIF(_maxCount, 0))
-    returning id_internal, __schema__.stream.max_age, __schema__.stream.max_count into _streamIdInternal, _maxAge, _maxCount;
+    on conflict do nothing;
     _currentVersion := -1;
+    get diagnostics _success = row_count;
   end if;
 
-  if _expectedVersion != _currentVersion then
-    if _expectedVersion != -2 then
-      /* Treat these values as a concurrency error in code */
-      return query select -9::bigint, -9, null::int, null::int;
-      return;
+  /* 
+    If the stream insert conflicted and we are expecting the stream to be empty,
+    we need to check that it still is. But we only care if we are actually appending messages.
+    (It's allowed to create a stream without appending messages!)
+
+    .. ok so I realized that maybe that's not such a good idea.
+    Commented it out for now. Hey, it ain't 1.0 yet!
+  */
+  -- if _expectedVersion = -1 /* ExpectedVersion.Empty */ then
+  --   if
+  --     _success = 0 and
+  --     cardinality(_newMessages) > 0 and
+  --     (select __schema__.stream.version
+  --       from __schema__.stream
+  --       where __schema__.stream.id = _streamId) > 0
+  --    then
+  --     raise exception 'WrongExpectedVersion';
+  --   end if;
+  -- end if;
+
+  /*
+    If we are using ExpectedVersion.Any, then we set the current version
+    to the version of the first new message if it was already written before,
+    otherwise we set it to what the stream is currently at.
+
+    If we are using ExpectedVersion.Empty, then we set the current version to that.
+    
+    Otherwise, we set it to whatever we expect it to be.
+
+    The concurrency control and idempotency check is performed after the insert completed, either
+    sucessfully or with conflicts.
+  */
+  select 
+    (case _expectedVersion
+      when -2 /* ExpectedVersion.Any */
+        then coalesce(
+          __schema__.read_stream_version_of_message(
+            __schema__.stream.id_internal,
+            _newMessages[1].message_id
+          ) -1,
+          __schema__.stream.version
+        )
+      when -1 
+        then -1
+      else
+        _expectedVersion
+      end),
+    __schema__.stream.position,
+    __schema__.stream.id_internal
+  into
+    _currentVersion,
+    _currentPosition,
+    _streamIdInternal
+  from __schema__.stream
+  where __schema__.stream.id = _streamId;
+
+  /*
+    If we are expecting the version to be something specific, check that it's not
+    higher than what the stream version actually is.
+   */
+  if (
+    _expectedVersion >= 0 and (_streamIdInternal is null or (
+      select __schema__.stream.version 
+      from __schema__.stream 
+      where __schema__.stream.id_internal = _streamIdInternal
+    ) < _expectedVersion)
+  ) then 
+    raise exception 'WrongExpectedVersion';
+  end if;
+
+  /*
+    If we are not trying to insert any messages, just end it right here and now.
+   */
+  if cardinality(_newMessages) = 0 then
+    return query select _currentPosition, _expectedVersion, null::int, null::int;
+    return;
+  end if;
+    
+  /*
+    Here we fucking go bois.
+   */
+  insert into __schema__.message(
+    "stream_id_internal",
+    "message_id",
+    "stream_version",
+    "created_at",
+    "type",
+    "data",
+    "meta"
+  )
+  select 
+    _streamIdInternal,
+    m.message_id,
+    _currentVersion + (row_number() over())::int,
+    _createdAt,
+    m."type",
+    m.data,
+    m.meta
+  from unnest(_newMessages) m
+  on conflict do nothing;
+  get diagnostics _success = row_count;
+
+  /*
+    We've inserted messages and ignored conflicts because we
+    want to detect them ourselves in order to make append idempotent.
+
+    Check that the amount of messages we successfully 
+    appended matches the amount of messages we wanted to append.
+   */
+  if _success <> cardinality(_newMessages) then
+    if _expectedVersion = -2 then
+      perform __schema__.enforce_idempotent_append(
+        _streamIdInternal,
+        _currentVersion - _success,
+        _newMessages,
+        _success
+      );
+    elseif _expectedVersion = -1 then
+      perform __schema__.enforce_idempotent_append(
+        _streamIdInternal,
+        -1,
+        _newMessages,
+        _success
+      );
     else
-      /* Get the latest message's version in the stream */
-      select stream_version into _currentVersion
-      from __schema__.message
-      where stream_id_internal = _streamIdInternal
-      order by stream_version desc
-      limit 1;
+      perform __schema__.enforce_idempotent_append(
+        _streamIdInternal,
+        _currentVersion - _success,
+        _newMessages,
+        _success
+      );
+      /* We can end it here because we don't need to update the stream table, as no new writes should have occurred. */
+      select 
+        __schema__.stream.version,
+        __schema__.stream.position,
+        __schema__.stream.max_age,
+        __schema__.stream.max_count
+      into 
+        _currentVersion,
+        _currentPosition,
+        _maxAge,
+        _maxCount
+      from __schema__.stream
+      where __schema__.stream.id_internal = _streamIdInternal;
+
+      return query select _currentPosition, _currentVersion, _maxAge, _maxCount;
+      return;
     end if;
   end if;
 
-  foreach _msg in array _newMessages
-  loop
-    _currentVersion := coalesce(_currentVersion, -1) + 1;
-    insert into __schema__."message"(
-      "stream_id_internal",
-      "message_id",
-      "stream_version",
-      "created_at",
-      "type",
-      "data",
-      "meta"
-    )
-    values(
-      _streamIdInternal,
-      _msg.message_id,
-      _currentVersion,
-      _createdAt,
-      _msg.type,
-      _msg.data,
-      _msg.meta
-    )
-    returning position into _lastPosition;
-  end loop;
+  /*
+    The append was successful with no conflicts, so we need to update
+    the stream table. Let's fetch the latest version and position from the message table.
+    */
+  select
+    coalesce(__schema__.message.position, -1),
+    coalesce(__schema__.message.stream_version, -1)
+  into
+    _currentPosition,
+    _currentVersion
+  from __schema__.message
+  where __schema__.message.stream_id_internal = _streamIdInternal
+  order by __schema__.message.position desc
+  limit 1;
 
   update __schema__.stream
-  set "version" = _currentVersion, "position" = _lastPosition
+  set "version" = _currentVersion, "position" = _currentPosition
   where id_internal = _streamIdInternal
   returning __schema__.stream.max_age, __schema__.stream.max_count into _maxAge, _maxCount;
   NOTIFY new_messages;
-  return query select _lastPosition, _currentVersion, _maxAge::int, _maxCount::int;
+  return query select _currentPosition, _currentVersion, _maxAge::int, _maxCount::int;
+end;
+$$ language plpgsql;
+
+/**
+ * Enforce that an append was idempotent.
+ */
+create or replace function __schema__.enforce_idempotent_append(
+  _streamIdInternal bigint,
+  _start int,
+  _newMessages __schema__.new_stream_message [],
+  _success int
+) returns void as $$
+declare
+  _storedMessageIds uuid [];
+begin
+  /* 
+    If _start is less than 0, then the expected version is -1 which is empty.
+    Because of that, we can already check whether or not new messages were written
+    which they shouldn't have been if they reach this part of the code.
+   */
+  if _start < 0 and _success > 0 then
+    raise exception 'WrongExpectedVersion';
+  end if;
+
+  _storedMessageIds := array(
+    select __schema__.message.message_id
+    from __schema__.message
+    where __schema__.message.stream_id_internal = _streamIdInternal
+      and __schema__.message.stream_version > _start
+    order by __schema__.message.stream_version asc  
+    limit cardinality(_newMessages)
+  );
+  
+  if _storedMessageIds <> (select array(select n.message_id from unnest(_newMessages) n)) then
+    raise exception 'WrongExpectedVersion';
+  end if;
+end;
+$$ language plpgsql;
+
+/**
+ * Returns the stream version of the specified message ID if it exists, null otherwise.
+ */
+create or replace function __schema__.read_stream_version_of_message(
+  _streamIdInternal bigint,
+  _messageId uuid
+) returns int
+as $$
+begin
+  return (
+    select __schema__.message.stream_version
+    from __schema__.message
+    where __schema__.message.message_id = _messageId
+    and __schema__.message.stream_id_internal = _streamIdInternal
+  );
 end;
 $$ language plpgsql;
 
@@ -353,10 +530,6 @@ begin
   )
   into _currentVersion;
 
-  if _currentVersion = -9 then
-    return -9;
-  end if;
-
   update __schema__.stream
   set "max_age" = NULLIF(_maxAge, 0),
       "max_count" = NULLIF(_maxCount, 0)
@@ -405,6 +578,7 @@ declare
   _streamIdInternal int;
   _latestStreamVersion int;
   _affected int;
+  _found int;
 begin
   /**
    * Start with the concurrency control.
@@ -413,12 +587,17 @@ begin
     into _streamIdInternal
   from __schema__.stream
   where __schema__.stream.id = _streamId;
+  get diagnostics _found = row_count;
+
+  if _found = 0 then
+    return 0;
+  end if;
 
   if _expectedVersion = -1 then
-    return -9; /* Wrong expected version */
+    raise exception 'WrongExpectedVersion';
   elsif _expectedVersion >= 0 then
     if _streamIdInternal is null then
-      return -9;
+      raise exception 'WrongExpectedVersion';
     end if;
 
     select __schema__.message.stream_version 
@@ -429,7 +608,7 @@ begin
     limit 1;
 
     if _latestStreamVersion != _expectedVersion then
-      return -9;
+      raise exception 'WrongExpectedVersion';
     end if;
   end if;
 
@@ -568,6 +747,16 @@ DROP FUNCTION IF EXISTS __schema__.get_scavengable_stream_messages(
   int,
   int,
   timestamp with time zone
+) CASCADE;
+DROP FUNCTION IF EXISTS __schema__.read_stream_version_of_message(
+  bigint,
+  uuid
+) CASCADE;
+DROP FUNCTION IF EXISTS __schema__.enforce_idempotent_append(
+  bigint,
+  int,
+  __schema__.new_stream_message [],
+  int
 ) CASCADE;
 DROP TYPE IF EXISTS __schema__.new_stream_message CASCADE;
 DROP SCHEMA __schema__;

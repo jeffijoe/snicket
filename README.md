@@ -12,6 +12,33 @@ Useful for Event Sourcing.
 [![npm](https://img.shields.io/npm/dt/snicket.svg?maxAge=1000)](https://www.npmjs.com/package/snicket)
 [![npm](https://img.shields.io/npm/l/snicket.svg?maxAge=1000)](https://github.com/jeffijoe/snicket/blob/master/LICENSE.md)
 
+# Table of Contents
+
+   * [Snicket](#snicket)
+   * [Installing](#installing)
+   * [Setting it up](#setting-it-up)
+   * [Quick Start](#quick-start)
+   * [Concepts](#concepts)
+   * [Appending](#appending)
+   * [Reading](#reading)
+      * [Filtering Expired Messages](#filtering-expired-messages)
+      * [Listing Streams](#listing-streams)
+   * [Stream Metadata](#stream-metadata)
+   * [Scavenging](#scavenging)
+   * [Subscriptions](#subscriptions)
+      * [Subscribing to a stream](#subscribing-to-a-stream)
+      * [Subscribing to the all-stream](#subscribing-to-the-all-stream)
+      * [Notifiers](#notifiers)
+   * [Idempotency](#idempotency)
+      * [Idempotency for ExpectedVersion.Any](#idempotency-for-expectedversionany)
+      * [Idempotency when specifying an explicit version](#idempotency-when-specifying-an-explicit-version)
+   * [Gap Detection](#gap-detection)
+   * [Serialization](#serialization)
+   * [Logging](#logging)
+   * [In-Memory Stream Store](#in-memory-stream-store)
+   * [About](#about)
+
+
 # Installing
 
 Get it on npm:
@@ -27,6 +54,9 @@ npm install pg
 ```
 
 # Setting it up
+
+> This is the setup for the Postgres implementation. 
+> There's also an [in-memory implementation](#in-memory-stream-store) if you just want to play around with it. The API is the exact same.
 
 You can either run the Snicket Postgres setup tool:
 
@@ -175,10 +205,10 @@ await store.appendToStream(
 )
 ```
 
-If there's an expected-version mismatch, a `ConcurrencyError` is thrown.
+If there's an expected-version mismatch, a `WrongExpectedVersionError` is thrown.
 
 ```ts
-import { ConcurrencyError } from 'snicket'
+import { WrongExpectedVersionError } from 'snicket'
 
 await store.appendToStream(
   'account-123',
@@ -193,7 +223,7 @@ await store.appendToStream(
     }
   }]
 ).catch(err => {
-  console.error(err) // ConcurrencyError: ...
+  console.error(err) // WrongExpectedVersionError: ...
 })
 ```
 
@@ -425,6 +455,71 @@ createPostgresStreamStore({
 })
 ```
 
+# Idempotency
+
+Similar to SqlStreamStore and EventStore, Snicket is idempotent when appending messages with the same ID, if and only if certain conditions are met.
+
+This is very useful when using deterministic message IDs (`node-uuid`'s `v5`!)
+
+## Idempotency for `ExpectedVersion.Any`
+
+If the specified messages have been previously written in the same order they appear in the append request, no new messages are written. 
+If the message ordering is different, or if there are additional new messages with the previous written ones, then a `WrongExpectedVersionError` is thrown. 
+
+Examples:
+
+```ts
+const [m1, m2, m3, m4] = generateMessages(4)
+const streamId = v4()
+
+// Create stream
+await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2, m3])
+
+// Idempotent appends
+await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2, m3])
+await store.appendToStream(streamId, ExpectedVersion.Any, [m1, m2])
+await store.appendToStream(streamId, ExpectedVersion.Any, [m2, m3])
+await store.appendToStream(streamId, ExpectedVersion.Any, [m3])
+
+// Not idempotent, different order
+await throws(
+  store.appendToStream(streamId, ExpectedVersion.Any, [m2, m1, m3])
+)
+// Not idempotent, partial previous write (m3) and a new write (m4)
+await throws(
+  store.appendToStream(streamId, ExpectedVersion.Any, [m3, m4])
+)
+
+```
+
+## Idempotency when specifying an explicit version
+
+If the specified messages have been previously written in the same order they appear in the append request starting at the expected version, 
+no new messages are written.
+
+Examples:
+
+```ts
+const [m1, m2, m3, m4] = generateMessages(4)
+const streamId = v4()
+
+// Create stream
+await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2, m3])
+
+// Idempotent appends
+await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2, m3])
+await store.appendToStream(streamId, ExpectedVersion.Empty, [m1, m2])
+await store.appendToStream(streamId, 0, [m2, m3])
+await store.appendToStream(streamId, 1, [m3])
+
+// Not idempotent, different order
+await throws(
+  store.appendToStream(streamId, ExpectedVersion.Empty, [m2, m1, m3])
+)
+// Not idempotent, partial previous write (m3) and a new write (m4)
+await throws(store.appendToStream(streamId, 1, [m3, m4]))
+```
+
 # Gap Detection
 
 During high load, it is natural for sequence gaps to occur in RDBMSes as transactions are rolled back due to conflicts. This is one way of gaps forming, and is harmless.
@@ -494,6 +589,19 @@ const store = createPostgresStreamStore({
 ```
 
 You can also create your own logger. See the implementation of the noop logger for a template.
+
+# In-Memory Stream Store
+
+There's an in-memory implementation that is useful for testing, or if you just want to play around
+without setting up a Postgres database.
+
+Naturally, being in-memory only means there's no persistence.
+
+```ts
+import { createInMemoryStreamStore } from 'snicket/lib/in-memory'
+
+const store = createInMemoryStreamStore()
+```
 
 # About
 

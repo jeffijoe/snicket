@@ -1,25 +1,23 @@
 import BigInteger from 'big-integer'
 import { retry, RetryOptions } from 'fejl'
-import { v4 } from 'uuid'
 import {
-  ConcurrencyError,
   DisposedError,
-  DuplicateMessageError,
-  InvalidParameterError
+  InvalidParameterError,
+  WrongExpectedVersionError
 } from '../errors/errors'
 import { noopLogger } from '../logging/noop'
-import { createMetadataCache } from '../meta/metadata-cache'
+import { createMetadataCache } from '../infra/metadata-cache'
 import { jsonSerializer } from '../serialization/json'
 import { createAllSubscription } from '../subscriptions/all-subscription'
 import { createPollingNotifier } from '../subscriptions/polling-notifier'
 import { createStreamSubscription } from '../subscriptions/stream-subscription'
+import { MAX_BIG_VALUE } from '../types/big-int'
 import {
   MessagePosition,
   NewStreamMessage,
   OperationalMessageType,
   OperationalStream,
   Position,
-  StreamDeleted,
   StreamMessage,
   StreamVersion
 } from '../types/messages'
@@ -55,16 +53,13 @@ import { createPostgresPool, runInTransaction } from './connection'
 import { createPostgresNotifier } from './pg-notifications-notifier'
 import { createScripts } from './scripts'
 import { PgStreamStoreConfig, ReadingConfig } from './types/config'
+import { newDeterministicUuid, newRandomUuid } from '../infra/id'
+import { createStreamDeletedPayload } from '../infra/deletion'
 
 /**
  * Postgres Stream Store.
  */
 export interface PgStreamStore extends StreamStore {}
-
-/**
- * Max bigint value.
- */
-const MAX_BIG_VALUE = BigInteger('9223372036854775807').toString()
 
 /**
  * Creates the Postgres Stream Store.
@@ -108,7 +103,7 @@ export function createPostgresStreamStore(
 
   const retryOpts: RetryOptions = {
     factor: 1.05,
-    tries: 200,
+    tries: 50,
     minTimeout: 0,
     maxTimeout: 50
   }
@@ -144,16 +139,8 @@ export function createPostgresStreamStore(
     expectedVersion: StreamVersion,
     newMessages: NewStreamMessage[]
   ): Promise<AppendToStreamResult> {
-    invariant.requiredString('streamId', streamId)
-    invariant.notOperationalStream('streamId', streamId)
-    invariant.required('expectedVersion', expectedVersion)
-    invariant.required('newMessages', newMessages)
-    newMessages.forEach((m, i) => {
-      invariant.required(`newMessages[${i}].messageId`, m.messageId)
-      invariant.uuid(`newMessages[${i}].messageId`, m.messageId)
-      invariant.required(`newMessages[${i}].type`, m.type)
-      invariant.required(`newMessages[${i}].data`, m.data)
-    })
+    assertNotDisposed()
+    invariant.validateAppendRequest(streamId, expectedVersion, newMessages)
 
     // Retried in case of concurrency issues.
     const retryableAppendToStream = async (again: Function) => {
@@ -162,45 +149,32 @@ export function createPostgresStreamStore(
           current_version,
           current_position,
           max_age,
-          max_count,
-          truncate_before
+          max_count
         } = await insertMessages(streamId, expectedVersion, newMessages)
 
-        throwIfErrorCode(current_version)
         return {
           streamPosition: current_position,
           streamVersion: current_version,
           maxAge: max_age,
-          maxCount: max_count,
-          truncateBefore: truncate_before
+          maxCount: max_count
         }
       } catch (error) {
-        throw handlePotentialConcurrencyError(error, expectedVersion, again)
+        throw handlePotentialWrongExpectedVersionError(
+          error,
+          expectedVersion,
+          again
+        )
       }
-    }
-
-    if (disposing) {
-      throw new DisposedError(
-        'The stream store has been disposed and is not accepting writes.'
-      )
     }
 
     writeLatch.enter()
     try {
-      const {
-        streamPosition,
-        streamVersion,
-        maxAge,
-        maxCount,
-        truncateBefore
-      } = await retry(retryableAppendToStream, retryOpts)
-
-      const scavengePromise = maybeScavenge(
-        streamId,
-        maxAge,
-        maxCount,
-        truncateBefore
+      const { streamPosition, streamVersion, maxAge, maxCount } = await retry(
+        retryableAppendToStream,
+        retryOpts
       )
+
+      const scavengePromise = maybeScavenge(streamId, maxAge, maxCount, null)
       if (scavengeSynchronously || disposing) {
         await scavengePromise
       }
@@ -221,11 +195,8 @@ export function createPostgresStreamStore(
     maxCount: number,
     cursor?: string
   ): Promise<ListStreamsResult> {
-    cursor = cursor || '0'
-    invariant.assert(
-      'cursor is not a valid listStreams cursor.',
-      /^\d*$/.test(cursor)
-    )
+    assertNotDisposed()
+    cursor = invariant.validateListStreamsRequest(maxCount, cursor)
     const result = await pool
       .query(scripts.listStreams(maxCount, cursor))
       .then(r => r.rows)
@@ -264,20 +235,17 @@ export function createPostgresStreamStore(
     count: number,
     direction = ReadDirection.Forward
   ): Promise<ReadStreamResult> {
-    invariant.requiredString('streamId', streamId)
-    invariant.required('afterVersion', fromVersionInclusive)
-    invariant.required('count', count)
-    InvalidParameterError.assert(count > 0, `count must be greater than zero`)
+    assertNotDisposed()
+    invariant.validateReadStreamRequest(streamId, fromVersionInclusive, count)
     fromVersionInclusive =
       fromVersionInclusive === Position.End
         ? Number.MAX_SAFE_INTEGER
         : fromVersionInclusive
     const forward = direction === ReadDirection.Forward
     const readStreamInfoQuery = scripts.readStreamInfo(streamId)
-
     const readStreamMessagesQuery = scripts.readStreamMessages(
       streamId,
-      Math.max(0, fromVersionInclusive),
+      Math.max(-1, fromVersionInclusive),
       count + 1,
       forward
     )
@@ -293,10 +261,10 @@ export function createPostgresStreamStore(
     const streamInfo = infoResult.rows[0] || null
     if (streamInfo === null) {
       return {
-        nextVersion: 0,
+        nextVersion: direction === ReadDirection.Backward ? -1 : 0,
         streamId: streamId,
-        streamPosition: '0',
-        streamVersion: 0,
+        streamPosition: '-1',
+        streamVersion: -1,
         isEnd: true,
         messages: []
       }
@@ -335,9 +303,8 @@ export function createPostgresStreamStore(
     count: number,
     direction = ReadDirection.Forward
   ): Promise<ReadAllResult> {
-    invariant.required('fromPositionInclusive', fromPositionInclusive)
-    invariant.required('count', count)
-    InvalidParameterError.assert(count > 0, 'count should be greater than zero')
+    assertNotDisposed()
+    invariant.validateReadAllRequest(fromPositionInclusive, count)
     return direction !== ReadDirection.Backward
       ? // This function reloads the page if gaps are detected.
         detectGapsAndReloadAll(
@@ -382,7 +349,7 @@ export function createPostgresStreamStore(
         messages: [],
         nextPosition: forward
           ? fromPositionInclusive.toString()
-          : /* istanbul ignore next */ '0'
+          : /* istanbul ignore next */ '-1'
       }
     }
 
@@ -403,7 +370,7 @@ export function createPostgresStreamStore(
         // the stream. There's no way around this that does not skip the first message.
         BigInteger.max(
           BigInteger(lastMessage.position).minus(BigInteger.one),
-          BigInteger.zero
+          BigInteger(-1)
         ).toString()
 
     return {
@@ -420,7 +387,8 @@ export function createPostgresStreamStore(
   async function readStreamMetadata(
     streamId: string
   ): Promise<StreamMetadataResult> {
-    invariant.requiredString('streamId', streamId)
+    assertNotDisposed()
+    invariant.validateReadStreamMetadataRequest(streamId)
     const result = await readStream(
       toMetadataStreamId(streamId),
       Position.End,
@@ -433,6 +401,7 @@ export function createPostgresStreamStore(
         metadata: null,
         metadataStreamVersion: -1,
         maxAge: null,
+        truncateBefore: null,
         maxCount: null
       }
     }
@@ -443,6 +412,7 @@ export function createPostgresStreamStore(
       metadataStreamVersion: result.streamVersion,
       streamId: streamId,
       maxAge: message.data.maxAge || null,
+      truncateBefore: message.data.truncateBefore,
       maxCount: message.data.maxCount || null
     }
   }
@@ -455,9 +425,8 @@ export function createPostgresStreamStore(
     expectedVersion: StreamVersion | ExpectedVersion,
     opts: SetStreamMetadataOptions
   ): Promise<SetStreamMetadataResult> {
-    invariant.requiredString('streamId', streamId)
-    invariant.required('expectedVersion', expectedVersion)
-    invariant.required('opts', opts)
+    assertNotDisposed()
+    invariant.validateSetStreamMetadataRequest(streamId, expectedVersion, opts)
     const metaStreamId = toMetadataStreamId(streamId)
     writeLatch.enter()
     try {
@@ -468,26 +437,37 @@ export function createPostgresStreamStore(
         truncateBefore:
           typeof opts.truncateBefore === 'number' ? opts.truncateBefore : null
       }
-      const result = await runInTransaction(pool, trx => {
-        return trx
-          .query(
-            scripts.setStreamMetadata(
-              streamId,
-              metaStreamId,
-              expectedVersion,
-              opts.maxAge || null,
-              opts.maxCount || null,
-              getCurrentTime(),
-              {
-                data,
-                messageId: v4(),
-                type: OperationalMessageType.Metadata
-              }
-            )
+      const metaMsgId = newRandomUuid()
+      const retryableSetStreamMetadata = async (again: Function) => {
+        try {
+          return await runInTransaction(pool, trx => {
+            return trx
+              .query(
+                scripts.setStreamMetadata(
+                  streamId,
+                  metaStreamId,
+                  expectedVersion,
+                  opts.maxAge || null,
+                  opts.maxCount || null,
+                  getCurrentTime(),
+                  {
+                    data,
+                    messageId: metaMsgId,
+                    type: OperationalMessageType.Metadata
+                  }
+                )
+              )
+              .then(x => x.rows[0])
+          })
+        } catch (error) {
+          throw handlePotentialWrongExpectedVersionError(
+            error,
+            expectedVersion,
+            again
           )
-          .then(x => x.rows[0])
-      })
-      throwIfErrorCode(result.current_version)
+        }
+      }
+      const result = await retry(retryableSetStreamMetadata, retryOpts)
       await maybeScavenge(
         streamId,
         data.maxAge,
@@ -510,14 +490,16 @@ export function createPostgresStreamStore(
     streamId: string,
     expectedVersion: ExpectedVersion
   ): Promise<void> {
-    invariant.requiredString('streamId', streamId)
-    invariant.notOperationalStream('streamId', streamId)
-    invariant.required('expectedVersion', expectedVersion)
+    assertNotDisposed()
+    invariant.validateDeleteStreamRequest(streamId, expectedVersion)
     writeLatch.enter()
     try {
+      const deletedMsgId = newDeterministicUuid(
+        `${streamId}.deleted.${expectedVersion}`
+      )
       const retryableDeleteStream = async (again: Function) => {
         try {
-          const result = await runInTransaction(pool, trx =>
+          await runInTransaction(pool, trx =>
             trx.query(
               scripts.deleteStream(
                 streamId,
@@ -526,15 +508,18 @@ export function createPostgresStreamStore(
                 getCurrentTime(),
                 {
                   type: OperationalMessageType.StreamDeleted,
-                  messageId: v4(),
+                  messageId: deletedMsgId,
                   data: createStreamDeletedPayload(streamId)
                 }
               )
             )
           ).then(r => r.rows[0].delete_stream)
-          throwIfErrorCode(result)
         } catch (error) {
-          throw handlePotentialConcurrencyError(error, expectedVersion, again)
+          throw handlePotentialWrongExpectedVersionError(
+            error,
+            expectedVersion,
+            again
+          )
         }
       }
 
@@ -554,6 +539,8 @@ export function createPostgresStreamStore(
     streamId: string,
     messageId: string
   ): Promise<void> {
+    assertNotDisposed()
+    invariant.validateDeleteMessageRequest(streamId, messageId)
     return deleteMessages(streamId, [messageId])
   }
 
@@ -590,6 +577,7 @@ export function createPostgresStreamStore(
     processMessage: MessageProcessor,
     subscriptionOptions?: StreamSubscriptionOptions
   ): Promise<StreamSubscription> {
+    assertNotDisposed()
     return new Promise<StreamSubscription>(resolve => {
       const subscription = createStreamSubscription(
         streamId,
@@ -623,6 +611,7 @@ export function createPostgresStreamStore(
     processMessage: MessageProcessor,
     subscriptionOptions?: AllSubscriptionOptions
   ): Promise<AllSubscription> {
+    assertNotDisposed()
     return new Promise<AllSubscription>(resolve => {
       const subscription = createAllSubscription(
         store,
@@ -649,6 +638,7 @@ export function createPostgresStreamStore(
    * Disposes underlying resources (database connection, subscriptions, notifier).
    */
   async function dispose() {
+    assertNotDisposed()
     disposing = true
     logger.trace(
       'pg-stream-store: dispose called, disposing all subscriptions..'
@@ -865,7 +855,7 @@ export function createPostgresStreamStore(
               ? streamInfo.stream_version
               : lastMessage.stream_version
             : streamInfo.stream_version) + 1
-        : Math.max(0, (isEnd ? 0 : lastMessage.stream_version) - 1),
+        : Math.max(-1, (isEnd ? -1 : lastMessage.stream_version) - 1),
       isEnd: isEnd,
       messages: messages.map(mapMessageResult)
     } as ReadStreamResult
@@ -889,6 +879,13 @@ export function createPostgresStreamStore(
       streamVersion: message.stream_version
     }
   }
+
+  /**
+   * Asserts that the stream store has not been disposed.
+   */
+  function assertNotDisposed() {
+    invariant.storeNotDisposed(disposing)
+  }
 }
 
 /**
@@ -898,83 +895,29 @@ export function createPostgresStreamStore(
  * @param expectedVersion
  * @param again
  */
-function handlePotentialConcurrencyError(
+function handlePotentialWrongExpectedVersionError(
   error: any,
   expectedVersion: number,
   again: Function
 ) {
-  if (isConcurrencyUniqueConstraintViolation(error)) {
+  if (isWrongExpectedVersionError(error)) {
+    // tslint:disable-next-line:no-ex-assign
+    error = new WrongExpectedVersionError()
     /* istanbul ignore else */
     if (expectedVersion === ExpectedVersion.Any) {
       return again(error)
     }
-
-    // tslint:disable-next-line:no-ex-assign
-    error = new ConcurrencyError()
-  } else if (isDuplicateMessageIdUniqueConstraintViolation(error)) {
-    return new DuplicateMessageError(
-      extractUuidKeyFromConstraintViolationError(error)
-    )
   }
 
   return error
 }
 
 /**
- * Throws if the specified version is an error code.
- */
-function throwIfErrorCode(version: number) {
-  if (version === AppendResultCodes.ConcurrencyIssue) {
-    throw new ConcurrencyError()
-  }
-}
-
-/**
- * Determines if the error is a unique constraint violation related to a concurrency issue.
+ * Determines if the error is the WrongExpectedVersion error from the sproc.
  * @param err
  */
-function isConcurrencyUniqueConstraintViolation(err: any) {
-  return (
-    err.message.endsWith('"stream_id_key"') ||
-    err.message.endsWith('"message_stream_id_internal_stream_version_unique"')
-  )
-}
-
-/**
- * Determines if the error is a unique constraint violation related to a concurrency issue.
- * @param err
- */
-function isDuplicateMessageIdUniqueConstraintViolation(err: any) {
-  return err.message.endsWith('"message_stream_id_internal_message_id_unique"')
-}
-
-/**
- * Extracts the offending duplicate key from a UCV error.
- *
- * @param err
- */
-function extractUuidKeyFromConstraintViolationError(err: any): string {
-  const result = Array.from(
-    /=\((.*?)\)/g.exec(err.detail) || /* istanbul ignore next */ []
-  )
-
-  /* istanbul ignore next */
-  if (result.length < 2) {
-    return '[unable to parse]'
-  }
-
-  // It might be a single UUID or it might be a composite.
-  // Splitting on the comma and taking the last value will do the trick.
-  const splat = result[1].split(', ')
-  return splat[splat.length - 1]
-}
-
-/**
- * Creates the necessary payload for a StreamDeleted message.
- * @param streamId
- */
-function createStreamDeletedPayload(streamId: string): StreamDeleted {
-  return { streamId }
+function isWrongExpectedVersionError(err: any) {
+  return err.message === 'WrongExpectedVersion'
 }
 
 /**
@@ -985,12 +928,4 @@ interface InsertResult {
   current_position: string
   max_count: number | null
   max_age: number | null
-  truncate_before: number | null
-}
-
-/**
- * Special `version` codes returned from the append sproc.
- */
-enum AppendResultCodes {
-  ConcurrencyIssue = -9
 }

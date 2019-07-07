@@ -41,6 +41,7 @@ export interface StreamMessage {
   streamVersion: StreamVersion
   meta: any
 }
+
 /**
  * Like StreamMessage but trimmed down to things needed for append.
  */
@@ -49,6 +50,33 @@ export type NewStreamMessage = Omit<
   'position' | 'createdAt' | 'streamId' | 'streamVersion' | 'meta'
 > & {
   meta?: StreamMessage['meta']
+}
+
+/**
+ * New Stream Message helpers.
+ */
+export const NewStreamMessage = {
+  /**
+   * Returns a `NewStreamMessage`.
+   *
+   * @param messageId
+   * @param type
+   * @param data
+   * @param meta
+   */
+  of(
+    messageId: StreamMessage['messageId'],
+    type: StreamMessage['type'],
+    data: StreamMessage['data'],
+    meta?: StreamMessage['meta']
+  ): NewStreamMessage {
+    return {
+      messageId,
+      type,
+      data,
+      meta
+    }
+  }
 }
 
 /**

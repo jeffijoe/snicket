@@ -1,48 +1,32 @@
 import { createPostgresStreamStore } from '../pg-stream-store'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
-import { v4 } from 'uuid'
-import { ExpectedVersion } from '../../types/stream-store'
-import { generateMessages } from './__helpers__/message-helper'
-import { waitUntil } from '../../__helpers__/wait-helper'
+import { filterExpiredTest } from '../../__acceptance__/stream-store.filterExpired.test'
+import { PgStreamStoreConfig } from '../types/config'
+import { createPostgresStreamStoreBootstrapper } from '../setup/bootstrapper'
 
-jest.setTimeout(20000)
-
-const store = createPostgresStreamStore({
+const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
-  reading: {
-    filterExpiredMessages: true,
-    metadataCacheTtl: 5
+  pg: {
+    ...streamStoreCfg.pg,
+    database: 'filter_expired_test'
   }
-})
+}
 
-const nonFilteringStore = createPostgresStreamStore({
-  ...streamStoreCfg
-})
+const bootstrapper = createPostgresStreamStoreBootstrapper(cfg)
+filterExpiredTest(async () => {
+  await bootstrapper.teardown()
+  await bootstrapper.bootstrap()
+  return {
+    store: createPostgresStreamStore({
+      ...cfg,
+      reading: {
+        filterExpiredMessages: true,
+        metadataCacheTtl: 5
+      }
+    }),
 
-afterAll(() => Promise.all([store.dispose(), nonFilteringStore.dispose()]))
-
-test('filters expired', async () => {
-  const streamId = v4()
-  await store.appendToStream(
-    streamId,
-    ExpectedVersion.Empty,
-    generateMessages(5)
-  )
-  await store.setStreamMetadata(streamId, ExpectedVersion.Empty, {
-    maxAge: 5
-  })
-
-  const before = await store.readStream(streamId, 0, 200)
-  expect(before.messages).toHaveLength(5)
-
-  await waitUntil(async () => {
-    const result = await store.readStream(streamId, 0, 200)
-    return result.messages.length === 0
-  })
-
-  // Verify that with filtering disabled that messages get purged.
-  await waitUntil(async () => {
-    const result = await nonFilteringStore.readStream(streamId, 0, 200)
-    return result.messages.length === 0
-  })
-})
+    nonFilteringStore: createPostgresStreamStore({
+      ...cfg
+    })
+  }
+}, bootstrapper.teardown)

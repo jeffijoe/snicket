@@ -1,4 +1,4 @@
-import { generateMessages } from '../../postgres/__tests__/__helpers__/message-helper'
+import { generateMessages } from '../../__helpers__/message-helper'
 import { StreamMessage } from '../../types/messages'
 import ms from 'ms'
 import { filterExpiredMessages } from '../filter-expired'

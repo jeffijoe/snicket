@@ -81,7 +81,7 @@ export interface StreamStore {
    * @param expectedVersion
    * @param newMessages
    * @throws {DuplicateMessageError}
-   * @throws {ConcurrencyError}
+   * @throws {WrongExpectedVersionError}
    * @throws {InconsistentStreamError}
    */
   appendToStream(
@@ -196,6 +196,10 @@ export interface StreamMetadataResult {
    * The max count of messages allowed in the stream.
    */
   maxCount: number | null
+  /**
+   * The version at which everything prior is discarded.
+   */
+  truncateBefore: number | null
   /**
    * Custom metadata.
    */
