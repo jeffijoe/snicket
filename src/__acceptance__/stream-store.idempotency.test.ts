@@ -3,7 +3,7 @@ import { StreamStore, ExpectedVersion } from '..'
 import { v4 } from 'uuid'
 import { generateMessages } from '../__helpers__/message-helper'
 import { WrongExpectedVersionError } from '../errors/errors'
-import { Position } from '../types/messages'
+import { ReadFrom } from '../types/messages'
 
 export function idempotencyTestsFor(
   getStore: () => Promise<StreamStore>,
@@ -73,7 +73,7 @@ export function idempotencyTestsFor(
 
       expect(
         await store
-          .readStream(streamId, Position.Start, 100)
+          .readStream(streamId, ReadFrom.Start, 100)
           .then(x => x.messages.length)
       ).toBe(5)
     })
@@ -95,7 +95,7 @@ export function idempotencyTestsFor(
 
       expect(
         await store
-          .readStream(streamId, Position.Start, 10)
+          .readStream(streamId, ReadFrom.Start, 10)
           .then(x => x.messages.length)
       ).toBe(3)
 
@@ -108,7 +108,7 @@ export function idempotencyTestsFor(
 
       expect(
         await store
-          .readStream(streamId, Position.Start, 10)
+          .readStream(streamId, ReadFrom.Start, 10)
           .then(x => x.messages.length)
       ).toBe(3)
     })
@@ -237,7 +237,7 @@ export function idempotencyTestsFor(
 
       expect(
         await store
-          .readStream(streamId, Position.Start, 10)
+          .readStream(streamId, ReadFrom.Start, 10)
           .then(x => x.messages.length)
       ).toBe(3)
 
@@ -251,7 +251,7 @@ export function idempotencyTestsFor(
 
       expect(
         await store
-          .readStream(streamId, Position.Start, 10)
+          .readStream(streamId, ReadFrom.Start, 10)
           .then(x => x.messages.length)
       ).toBe(3)
     })

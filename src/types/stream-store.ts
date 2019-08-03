@@ -3,7 +3,7 @@ import {
   NewStreamMessage,
   MessagePosition,
   StreamMessage,
-  Position
+  ReadFrom
 } from './messages'
 import {
   MessageProcessor,
@@ -40,7 +40,7 @@ export interface StreamStore {
    */
   readStream(
     streamId: string,
-    fromVersionInclusive: StreamVersion | Position,
+    fromVersionInclusive: StreamVersion | ReadFrom,
     count: number,
     direction?: ReadDirection
   ): Promise<ReadStreamResult>
@@ -53,7 +53,7 @@ export interface StreamStore {
    * @param direction
    */
   readAll(
-    fromPositionInclusive: MessagePosition | Position,
+    fromPositionInclusive: MessagePosition | ReadFrom,
     count: number,
     direction?: ReadDirection
   ): Promise<ReadAllResult>

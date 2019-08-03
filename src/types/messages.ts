@@ -17,7 +17,7 @@ export type StreamVersion = number
 /**
  * Meta positions for reading.
  */
-export enum Position {
+export enum ReadFrom {
   /**
    * Read from the start of the stream.
    */

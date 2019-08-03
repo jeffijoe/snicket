@@ -14,7 +14,7 @@ import BigInteger from 'big-integer'
 import {
   NewStreamMessage,
   StreamVersion,
-  Position,
+  ReadFrom,
   MessagePosition,
   StreamMessage,
   OperationalStream,
@@ -138,7 +138,7 @@ export function createInMemoryStreamStore(
    */
   async function readStream(
     streamId: string,
-    fromVersionInclusive: StreamVersion | Position,
+    fromVersionInclusive: StreamVersion | ReadFrom,
     count: number,
     direction?: ReadDirection
   ): Promise<ReadStreamResult> {
@@ -152,7 +152,7 @@ export function createInMemoryStreamStore(
    */
   async function readStreamInternal(
     streamId: string,
-    fromVersionInclusive: StreamVersion | Position,
+    fromVersionInclusive: StreamVersion | ReadFrom,
     count: number,
     direction?: ReadDirection
   ): Promise<ReadStreamResult> {
@@ -169,9 +169,9 @@ export function createInMemoryStreamStore(
     }
 
     const startIndex =
-      fromVersionInclusive === Position.Start
+      fromVersionInclusive === ReadFrom.Start
         ? 0
-        : fromVersionInclusive === Position.End
+        : fromVersionInclusive === ReadFrom.End
         ? stream.messages.length - 1
         : stream.messages.findIndex(
             m => m.streamVersion >= fromVersionInclusive
@@ -277,16 +277,16 @@ export function createInMemoryStreamStore(
    * @param direction
    */
   async function readAll(
-    fromPositionInclusive: MessagePosition | Position,
+    fromPositionInclusive: MessagePosition | ReadFrom,
     count: number,
     direction?: ReadDirection
   ): Promise<ReadAllResult> {
     assertNotDisposed()
     invariant.validateReadAllRequest(fromPositionInclusive, count)
     const fromPos = BigInteger(fromPositionInclusive.toString())
-    const startIndex = fromPos.eq(Position.Start)
+    const startIndex = fromPos.eq(ReadFrom.Start)
       ? 0
-      : fromPos.eq(Position.End)
+      : fromPos.eq(ReadFrom.End)
       ? inMemoryAllStream.length - 1
       : inMemoryAllStream.findIndex(m => m.position.greaterOrEquals(fromPos))
 
@@ -390,7 +390,7 @@ export function createInMemoryStreamStore(
   ): Promise<StreamMetadataResult> {
     const read = await readStreamInternal(
       toMetadataStreamId(streamId),
-      Position.End,
+      ReadFrom.End,
       1,
       ReadDirection.Backward
     )
@@ -537,8 +537,8 @@ export function createInMemoryStreamStore(
             resolve(subscription)
           },
           dispose: async () => {
-            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             await callSubscriptionOptionsDisposer(subscriptionOptions)
+            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             resolve(subscription)
           }
         }
@@ -572,8 +572,8 @@ export function createInMemoryStreamStore(
             resolve(subscription)
           },
           dispose: async () => {
-            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             await callSubscriptionOptionsDisposer(subscriptionOptions)
+            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             resolve(subscription)
           }
         }

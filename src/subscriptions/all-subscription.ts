@@ -40,6 +40,7 @@ export function createAllSubscription(
   const loopLatch = createDuplexLatch()
   const disposeListener = notifier.listen(next.set)
   let _disposed = false
+  let _disposePromise: Promise<unknown> | null = null
   let _nextPosition = BigInteger(SubscribeAt.End)
   const config: AllSubscriptionOptions = {
     dispose: /* istanbul ignore next */ () => Promise.resolve(),
@@ -233,13 +234,16 @@ export function createAllSubscription(
    * rather than the consumer disposing.
    */
   async function dispose() {
-    DisposedError.assert(!_disposed)
+    if (_disposePromise) {
+      await _disposePromise
+      return
+    }
     _disposed = true
     disposeListener()
     // In case we are waiting in the loop, make it continue so it can exit.
     next.set()
     // Waits for the loop to fully exit.
-    await loopLatch.wait()
-    await config.dispose!()
+    _disposePromise = loopLatch.wait().then(() => config.dispose!())
+    await _disposePromise
   }
 }

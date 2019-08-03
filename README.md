@@ -259,9 +259,9 @@ if (streamPage.isEnd === false) {
 We can also read all messages from all streams back in the order they were saved.
 
 ```ts
-import { Position } from 'snicket'
+import { ReadFrom } from 'snicket'
 let allPage = await store.readStream(
-  Position.Start,  // From what global position?
+  ReadFrom.Start,  // From what global position?
   100 // How many to read?
 )
 
@@ -284,7 +284,7 @@ Both reads support reading backwards, too.
 import { ReadDirection } from 'snicket'
 
 await store.readStream(
-  Position.Start, 
+  ReadFrom.Start, 
   100,
   ReadDirection.Backward // The default is `Forward`.
 )

@@ -1,5 +1,5 @@
 import { v4 } from 'uuid'
-import { StreamStore, ExpectedVersion, Position, ReadDirection } from '..'
+import { StreamStore, ExpectedVersion, ReadFrom, ReadDirection } from '..'
 import { generateMessages } from '../__helpers__/message-helper'
 
 jest.setTimeout(6000000)
@@ -156,7 +156,7 @@ export function readStreamTestsFor(
       )
       const result1 = await store.readStream(
         streamId,
-        Position.End,
+        ReadFrom.End,
         5,
         ReadDirection.Backward
       )
@@ -184,7 +184,7 @@ export function readStreamTestsFor(
 
       const allResult = await store.readStream(
         streamId,
-        Position.End,
+        ReadFrom.End,
         1000,
         ReadDirection.Backward
       )
@@ -203,7 +203,7 @@ export function readStreamTestsFor(
     expect(
       await store.readStream(
         streamId,
-        Position.Start,
+        ReadFrom.Start,
         10,
         ReadDirection.Forward
       )
@@ -219,7 +219,7 @@ export function readStreamTestsFor(
     expect(
       await store.readStream(
         streamId,
-        Position.Start,
+        ReadFrom.Start,
         10,
         ReadDirection.Backward
       )
@@ -238,7 +238,7 @@ export function readStreamTestsFor(
     expect(
       await store.readStream(
         streamId,
-        Position.Start,
+        ReadFrom.Start,
         10,
         ReadDirection.Forward
       )
@@ -251,7 +251,7 @@ export function readStreamTestsFor(
       streamVersion: -1
     })
     expect(
-      await store.readStream(streamId, Position.End, 10, ReadDirection.Forward)
+      await store.readStream(streamId, ReadFrom.End, 10, ReadDirection.Forward)
     ).toEqual({
       isEnd: true,
       messages: [],
@@ -264,7 +264,7 @@ export function readStreamTestsFor(
     expect(
       await store.readStream(
         streamId,
-        Position.Start,
+        ReadFrom.Start,
         10,
         ReadDirection.Backward
       )
@@ -277,7 +277,7 @@ export function readStreamTestsFor(
       streamVersion: -1
     })
     expect(
-      await store.readStream(streamId, Position.End, 10, ReadDirection.Backward)
+      await store.readStream(streamId, ReadFrom.End, 10, ReadDirection.Backward)
     ).toEqual({
       isEnd: true,
       messages: [],
