@@ -1,4 +1,4 @@
-import { StreamStore, ExpectedVersion, Position, ReadDirection } from '..'
+import { StreamStore, ExpectedVersion, ReadFrom, ReadDirection } from '..'
 import { v4 } from 'uuid'
 import { generateMessages } from '../__helpers__/message-helper'
 
@@ -17,7 +17,7 @@ export function readAllTestsFor(
 
   test('empty', async () => {
     expect(
-      await store.readAll(Position.Start, 10, ReadDirection.Forward)
+      await store.readAll(ReadFrom.Start, 10, ReadDirection.Forward)
     ).toEqual({
       isEnd: true,
       messages: [],
@@ -25,7 +25,7 @@ export function readAllTestsFor(
     })
 
     expect(
-      await store.readAll(Position.Start, 10, ReadDirection.Backward)
+      await store.readAll(ReadFrom.Start, 10, ReadDirection.Backward)
     ).toEqual({
       isEnd: true,
       messages: [],
@@ -36,7 +36,7 @@ export function readAllTestsFor(
     await store.appendToStream(v4(), ExpectedVersion.Empty, [])
 
     expect(
-      await store.readAll(Position.Start, 10, ReadDirection.Forward)
+      await store.readAll(ReadFrom.Start, 10, ReadDirection.Forward)
     ).toEqual({
       isEnd: true,
       messages: [],
@@ -44,9 +44,9 @@ export function readAllTestsFor(
     })
 
     expect(
-      // Note, using Position.End here is intentional, the end
+      // Note, using ReadFrom.End here is intentional, the end
       // result should be the same but different code paths might be triggered.
-      await store.readAll(Position.End, 10, ReadDirection.Backward)
+      await store.readAll(ReadFrom.End, 10, ReadDirection.Backward)
     ).toEqual({
       isEnd: true,
       messages: [],
@@ -98,7 +98,7 @@ export function readAllTestsFor(
 
     test('can read backwards', async () => {
       const result1 = await store.readAll(
-        Position.End,
+        ReadFrom.End,
         10,
         ReadDirection.Backward
       )
@@ -116,7 +116,7 @@ export function readAllTestsFor(
       expect(result2.messages.length).toBe(10)
 
       const allResult = await store.readAll(
-        Position.End,
+        ReadFrom.End,
         1000,
         ReadDirection.Backward
       )

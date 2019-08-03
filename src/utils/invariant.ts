@@ -3,7 +3,7 @@ import validateUUID from 'uuid-validate'
 import {
   NewStreamMessage,
   MessagePosition,
-  Position,
+  ReadFrom,
   StreamVersion
 } from '../types/messages'
 import { ExpectedVersion, SetStreamMetadataOptions } from '..'
@@ -160,7 +160,7 @@ export function validateReadStreamRequest(
  * @param count
  */
 export function validateReadAllRequest(
-  fromPositionInclusive: MessagePosition | Position,
+  fromPositionInclusive: MessagePosition | ReadFrom,
   count: number
 ) {
   required('fromPositionInclusive', fromPositionInclusive)

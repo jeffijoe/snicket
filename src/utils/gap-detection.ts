@@ -2,7 +2,7 @@ import BigInteger from 'big-integer'
 import { StreamStore, ReadDirection } from '../types/stream-store'
 import { Logger } from '../types/logger'
 import { delay } from './promise-util'
-import { Position } from '../types/messages'
+import { ReadFrom } from '../types/messages'
 
 /**
  * Detects gaps and reloads.
@@ -21,7 +21,7 @@ export async function detectGapsAndReloadAll(
   logger: Logger,
   reloadDelay: number,
   reloadTimes: number,
-  fromPositionInclusive: string | Position,
+  fromPositionInclusive: string | ReadFrom,
   count: number,
   readAll: StreamStore['readAll']
 ) {
