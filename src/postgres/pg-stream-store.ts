@@ -591,8 +591,8 @@ export function createPostgresStreamStore(
             resolve(subscription)
           },
           dispose: async () => {
-            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             await callSubscriptionOptionsDisposer(subscriptionOptions)
+            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             resolve(subscription)
           }
         }
@@ -624,8 +624,8 @@ export function createPostgresStreamStore(
             resolve(subscription)
           },
           dispose: async () => {
-            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             await callSubscriptionOptionsDisposer(subscriptionOptions)
+            subscriptions.splice(subscriptions.indexOf(subscription), 1)
             resolve(subscription)
           }
         }
