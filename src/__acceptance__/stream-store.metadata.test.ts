@@ -29,14 +29,14 @@ export function metadataTestsFor(
       metadataStreamVersion: -1,
       truncateBefore: null,
       maxAge: null,
-      maxCount: null
+      maxCount: null,
     })
 
     const setResult1 = await store.setStreamMetadata(
       streamId,
       ExpectedVersion.Empty,
       {
-        metadata: { me: 'ta', da: 'ta' }
+        metadata: { me: 'ta', da: 'ta' },
       }
     )
     expect(setResult1.currentVersion).toBe(0)
@@ -50,7 +50,7 @@ export function metadataTestsFor(
     ).rejects.toBeInstanceOf(WrongExpectedVersionError)
 
     await store.setStreamMetadata(streamId, setResult1.currentVersion, {
-      metadata: { up: 'dated' }
+      metadata: { up: 'dated' },
     })
 
     const getResult2 = await store.readStreamMetadata(streamId)
@@ -69,7 +69,7 @@ export function metadataTestsFor(
         maxAge: 60,
         maxCount: 50,
         truncateBefore: 5,
-        metadata: {}
+        metadata: {},
       }
     )
 
@@ -82,7 +82,7 @@ export function metadataTestsFor(
       maxAge: 60,
       maxCount: 50,
       truncateBefore: 5,
-      metadata: {}
+      metadata: {},
     })
 
     const setResult2 = await store.setStreamMetadata(
@@ -90,7 +90,7 @@ export function metadataTestsFor(
       getResult1.metadataStreamVersion,
       {
         maxAge: 0,
-        maxCount: null
+        maxCount: null,
       }
     )
 
@@ -103,7 +103,7 @@ export function metadataTestsFor(
       maxAge: null,
       maxCount: null,
       truncateBefore: null,
-      metadata: {}
+      metadata: {},
     })
   })
 }

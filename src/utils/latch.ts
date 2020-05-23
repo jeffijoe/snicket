@@ -36,16 +36,16 @@ export function createDuplexLatch(): DuplexLatch {
       maybeTriggerResolves()
     },
     wait() {
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         pendingResolves.push(resolve)
         maybeTriggerResolves()
       })
-    }
+    },
   }
 
   function maybeTriggerResolves() {
     if (count <= 0) {
-      pendingResolves.forEach(r => r())
+      pendingResolves.forEach((r) => r())
       pendingResolves = []
     }
   }

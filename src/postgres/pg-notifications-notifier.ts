@@ -37,7 +37,7 @@ export function createPostgresNotifier(
       }
       _disposed = true
       _listeners = []
-    }
+    },
   }
 
   /**
@@ -48,7 +48,7 @@ export function createPostgresNotifier(
     let intervalPromise: any = null
     const clientPromise = pool
       .connect()
-      .then(async client => {
+      .then(async (client) => {
         client.addListener('notification', invokeListeners)
         await client.query('LISTEN new_messages')
         logger.trace('pg-notifications-notifier: listener configured')
@@ -67,7 +67,7 @@ export function createPostgresNotifier(
         return client
       })
       .catch(
-        /* istanbul ignore next */ err => {
+        /* istanbul ignore next */ (err) => {
           logger.error(
             'pg-notifications-notifier: error while configuring listener',
             err
@@ -81,7 +81,7 @@ export function createPostgresNotifier(
         clearInterval(interval)
         await intervalPromise
       }
-      return clientPromise.then(c => {
+      return clientPromise.then((c) => {
         c.removeListener('notification', invokeListeners)
         return c.release()
       })

@@ -10,8 +10,8 @@ const cfg = {
     ...streamStoreCfg.pg,
     dropIfTest: false,
     data: 'pg_stream_store_schema_test',
-    schema: 'schematest'
-  }
+    schema: 'schematest',
+  },
 }
 
 describe('schema', () => {
@@ -34,7 +34,7 @@ describe('schema', () => {
 
     streamStore = createPostgresStreamStore(cfg)
     await expect(append(streamStore)).rejects.toMatchObject({
-      message: expect.stringContaining('schematest')
+      message: expect.stringContaining('schematest'),
     })
   })
 })
@@ -45,7 +45,7 @@ function append(streamStore: StreamStore) {
       messageId: v4(),
       data: {},
       meta: {},
-      type: 'test'
-    }
+      type: 'test',
+    },
   ])
 }

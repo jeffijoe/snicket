@@ -1,7 +1,7 @@
 import {
   PgStreamStoreConfig,
   createPostgresStreamStoreBootstrapper,
-  createPostgresStreamStore
+  createPostgresStreamStore,
 } from '..'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 import { subscribeToAllTestsFor } from '../../__acceptance__/stream-store.subscribeToAll.test'
@@ -12,12 +12,12 @@ const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
   pg: {
     ...streamStoreCfg.pg,
-    database: 'all_stream_subscription_test'
-  }
+    database: 'all_stream_subscription_test',
+  },
 }
 
 const bootstrapper = createPostgresStreamStoreBootstrapper(cfg)
-subscribeToAllTestsFor(async logger => {
+subscribeToAllTestsFor(async (logger) => {
   await bootstrapper.teardown()
   await bootstrapper.bootstrap()
   return createPostgresStreamStore({ ...cfg, logger })

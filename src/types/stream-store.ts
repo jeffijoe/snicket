@@ -3,14 +3,14 @@ import {
   NewStreamMessage,
   MessagePosition,
   StreamMessage,
-  ReadFrom
+  ReadFrom,
 } from './messages'
 import {
   MessageProcessor,
   StreamSubscriptionOptions,
   StreamSubscription,
   AllSubscriptionOptions,
-  AllSubscription
+  AllSubscription,
 } from './subscriptions'
 
 /**
@@ -254,7 +254,7 @@ export interface SetStreamMetadataResult {
  */
 export enum ExpectedVersion {
   Any = -2,
-  Empty = -1
+  Empty = -1,
 }
 
 /**
@@ -268,5 +268,5 @@ export enum ReadDirection {
   /**
    * Read backwards from newest to oldest.
    */
-  Backward
+  Backward,
 }

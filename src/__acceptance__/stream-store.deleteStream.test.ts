@@ -4,13 +4,13 @@ import {
   StreamDeleted,
   ExpectedVersion,
   ReadDirection,
-  WrongExpectedVersionError
+  WrongExpectedVersionError,
 } from '..'
 import { v4 } from 'uuid'
 import { generateMessages } from '../__helpers__/message-helper'
 import {
   waitForStreamSubscription,
-  waitForAllSubscription
+  waitForAllSubscription,
 } from '../__helpers__/wait-helper'
 
 export function deleteStreamTestFor(
@@ -31,13 +31,13 @@ export function deleteStreamTestFor(
       waitForStreamSubscription(
         store,
         OperationalStream.Deleted,
-        msg => (msg.data as StreamDeleted).streamId === streamId
+        (msg) => (msg.data as StreamDeleted).streamId === streamId
       ),
 
       waitForAllSubscription(
         store,
-        msg => (msg.data as StreamDeleted).streamId === streamId
-      )
+        (msg) => (msg.data as StreamDeleted).streamId === streamId
+      ),
     ]
 
     const result = await store.appendToStream(
@@ -58,7 +58,7 @@ export function deleteStreamTestFor(
 
     expect(
       deletedMsgs.messages.find(
-        m => (m.data as StreamDeleted).streamId === streamId
+        (m) => (m.data as StreamDeleted).streamId === streamId
       )
     ).toBeTruthy()
 

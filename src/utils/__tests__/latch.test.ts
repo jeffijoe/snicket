@@ -30,5 +30,5 @@ test('resolves wait() when 0 immediately', async () => {
 })
 
 function delay(ms: number) {
-  return new Promise<void>(resolve => setTimeout(resolve, ms))
+  return new Promise<void>((resolve) => setTimeout(resolve, ms))
 }

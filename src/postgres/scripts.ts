@@ -137,7 +137,7 @@ export function createScripts(
         maxCount,
         truncateBefore,
         serializeDate(currentTime)
-      )
+      ),
   }
 }
 
@@ -151,7 +151,7 @@ function serializeMessages(
   serializer: MessageDataSerializer
 ) {
   return `ARRAY[${messages
-    .map(m => serializeMessage(m, serializer))
+    .map((m) => serializeMessage(m, serializer))
     .join(',')}]`
 }
 

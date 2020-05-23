@@ -30,7 +30,7 @@ export function createJsonSerializer(
     },
     deserialize(str) {
       return JSON.parse(str, reviver)
-    }
+    },
   }
 }
 

@@ -4,6 +4,6 @@ import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 
 jest.setTimeout(50000)
 
-subscribeToStreamTestsFor(async logger => {
+subscribeToStreamTestsFor(async (logger) => {
   return createPostgresStreamStore({ ...streamStoreCfg, logger })
 })

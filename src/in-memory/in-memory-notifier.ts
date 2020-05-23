@@ -20,19 +20,19 @@ export function createInMemoryNotifier(): InMemoryNotifier {
   return {
     invoke() {
       // tslint:disable-next-line:no-floating-promises
-      Promise.resolve().then(() => observers.forEach(o => o()))
+      Promise.resolve().then(() => observers.forEach((o) => o()))
     },
     listen(cb) {
       DisposedError.assert(!disposed, 'The notifier has been disposed.')
       observers.push(cb)
       return () => {
-        observers = observers.filter(o => o !== cb)
+        observers = observers.filter((o) => o !== cb)
       }
     },
     async dispose() {
       DisposedError.assert(!disposed, 'The notifier has already been disposed.')
       disposed = true
       observers = []
-    }
+    },
   }
 }

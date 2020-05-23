@@ -23,7 +23,7 @@ export function filterExpiredTest(
   afterAll(() =>
     Promise.all([
       store.dispose().catch(Boolean),
-      nonFilteringStore.dispose().catch(Boolean)
+      nonFilteringStore.dispose().catch(Boolean),
     ]).then(teardown)
   )
 
@@ -36,7 +36,7 @@ export function filterExpiredTest(
     )
 
     await store.setStreamMetadata(streamId, ExpectedVersion.Empty, {
-      maxAge: 5
+      maxAge: 5,
     })
 
     const before = await store.readStream(streamId, 0, 200)
@@ -54,8 +54,8 @@ export function filterExpiredTest(
     // Verify they don't appear in the all-stream
     await waitUntil(async () => {
       const result = await store.readAll(0, 999999)
-      return !result.messages.some(m =>
-        before.messages.some(b => b.messageId === m.messageId)
+      return !result.messages.some((m) =>
+        before.messages.some((b) => b.messageId === m.messageId)
       )
     })
   })

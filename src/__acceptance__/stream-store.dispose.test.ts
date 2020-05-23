@@ -23,8 +23,8 @@ export function disposeTestsFor(
         {
           messageId: v4(),
           data: {},
-          type: 'test'
-        }
+          type: 'test',
+        },
       ])
 
       await store.dispose()
@@ -36,8 +36,8 @@ export function disposeTestsFor(
           {
             messageId: v4(),
             data: {},
-            type: 'test'
-          }
+            type: 'test',
+          },
         ])
       ).rejects.toBeInstanceOf(DisposedError)
 
@@ -74,11 +74,11 @@ export function disposeTestsFor(
           dispose: () =>
             delay(500).then(() => {
               streamSubDisposerCompleted++
-            })
+            }),
         }
       )
       const allSub = await store.subscribeToAll(
-        async msg => {
+        async (msg) => {
           // Only "listen" for the stream message.
           /* istanbul ignore else */
           if (msg.streamId === streamId) {
@@ -92,7 +92,7 @@ export function disposeTestsFor(
           dispose: () =>
             delay(500).then(() => {
               allSubDisposerCompleted++
-            })
+            }),
         }
       )
       const onStreamMessagePromise = onStreamMessage.wait()
@@ -101,8 +101,8 @@ export function disposeTestsFor(
         {
           messageId: v4(),
           data: {},
-          type: 'test'
-        }
+          type: 'test',
+        },
       ])
 
       await onStreamMessagePromise

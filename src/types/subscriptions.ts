@@ -85,7 +85,7 @@ export enum SubscribeAt {
   /**
    * Subscribe at the end
    */
-  End = -1
+  End = -1,
 }
 
 /**

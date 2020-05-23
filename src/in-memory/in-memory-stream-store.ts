@@ -8,7 +8,7 @@ import {
   ExpectedVersion,
   SetStreamMetadataOptions,
   SetStreamMetadataResult,
-  AppendToStreamResult
+  AppendToStreamResult,
 } from '../types/stream-store'
 import BigInteger from 'big-integer'
 import {
@@ -18,19 +18,19 @@ import {
   MessagePosition,
   StreamMessage,
   OperationalStream,
-  OperationalMessageType
+  OperationalMessageType,
 } from '../types/messages'
 import {
   InMemoryStream,
   InMemoryStreamMessage,
-  createInMemoryStream
+  createInMemoryStream,
 } from './in-memory-stream'
 import {
   MessageProcessor,
   StreamSubscriptionOptions,
   StreamSubscription,
   AllSubscriptionOptions,
-  AllSubscription
+  AllSubscription,
 } from '..'
 import * as invariant from '../utils/invariant'
 import { MessageDataSerializer } from '../types/serialization'
@@ -94,7 +94,7 @@ export function createInMemoryStreamStore(
     deleteStream,
     dispose,
     subscribeToAll,
-    subscribeToStream
+    subscribeToStream,
   }
   return store
 
@@ -124,7 +124,7 @@ export function createInMemoryStreamStore(
     const slice = streamValues.slice(fromInclusive, end)
     return {
       cursor: end.toString(),
-      streamIds: slice.map(s => s.id)
+      streamIds: slice.map((s) => s.id),
     }
   }
 
@@ -164,7 +164,7 @@ export function createInMemoryStreamStore(
         nextVersion: direction === ReadDirection.Backward ? -1 : 0,
         streamPosition: '-1',
         streamId,
-        streamVersion: -1
+        streamVersion: -1,
       }
     }
 
@@ -174,7 +174,7 @@ export function createInMemoryStreamStore(
         : fromVersionInclusive === ReadFrom.End
         ? stream.messages.length - 1
         : stream.messages.findIndex(
-            m => m.streamVersion >= fromVersionInclusive
+            (m) => m.streamVersion >= fromVersionInclusive
           )
 
     if (startIndex === -1) {
@@ -185,7 +185,7 @@ export function createInMemoryStreamStore(
         messages: [],
         nextVersion:
           direction === ReadDirection.Backward ? -1 : stream.streamVersion + 1,
-        streamPosition: stream.position.toString()
+        streamPosition: stream.position.toString(),
       }
     }
     const readResult =
@@ -196,9 +196,9 @@ export function createInMemoryStreamStore(
     return {
       ...readResult,
       messages: filterExpiredMessages(
-        readResult.messages.map(m => ({ maxAge: meta.maxAge, message: m })),
+        readResult.messages.map((m) => ({ maxAge: meta.maxAge, message: m })),
         getCurrentTime
-      ).valid
+      ).valid,
     }
   }
 
@@ -226,13 +226,13 @@ export function createInMemoryStreamStore(
       streamId: stream.id,
       streamPosition: stream.position.toString(),
       streamVersion: stream.streamVersion,
-      messages: slice.map(m => toStreamMessage(m)),
+      messages: slice.map((m) => toStreamMessage(m)),
       nextVersion:
         (lastMessage
           ? isEnd
             ? stream.streamVersion
             : lastMessage.streamVersion
-          : stream.streamVersion) + 1
+          : stream.streamVersion) + 1,
     }
   }
 
@@ -264,8 +264,8 @@ export function createInMemoryStreamStore(
       streamId: stream.id,
       streamPosition: stream.position.toString(),
       streamVersion: stream.streamVersion,
-      messages: slice.map(m => toStreamMessage(m)),
-      nextVersion: Math.max(-1, isEnd ? -1 : lastMessage!.streamVersion - 1)
+      messages: slice.map((m) => toStreamMessage(m)),
+      nextVersion: Math.max(-1, isEnd ? -1 : lastMessage!.streamVersion - 1),
     }
   }
 
@@ -288,7 +288,7 @@ export function createInMemoryStreamStore(
       ? 0
       : fromPos.eq(ReadFrom.End)
       ? inMemoryAllStream.length - 1
-      : inMemoryAllStream.findIndex(m => m.position.greaterOrEquals(fromPos))
+      : inMemoryAllStream.findIndex((m) => m.position.greaterOrEquals(fromPos))
 
     if (startIndex === -1) {
       return {
@@ -297,7 +297,7 @@ export function createInMemoryStreamStore(
         nextPosition:
           direction === ReadDirection.Backward
             ? '-1'
-            : globalHeadPosition.plus(1).toString()
+            : globalHeadPosition.plus(1).toString(),
       }
     }
 
@@ -307,7 +307,7 @@ export function createInMemoryStreamStore(
         : readAllForward(startIndex, count)
     return {
       ...result,
-      messages: await maybeFilterExpiredMessages(result.messages)
+      messages: await maybeFilterExpiredMessages(result.messages),
     }
   }
 
@@ -331,10 +331,10 @@ export function createInMemoryStreamStore(
 
     return {
       isEnd,
-      messages: slice.map(m => toStreamMessage(m)),
+      messages: slice.map((m) => toStreamMessage(m)),
       nextPosition: (lastMessage ? lastMessage.position : globalHeadPosition)
         .plus(1)
-        .toString()
+        .toString(),
     }
   }
 
@@ -358,13 +358,13 @@ export function createInMemoryStreamStore(
     slice.reverse()
     return {
       isEnd,
-      messages: slice.map(m => toStreamMessage(m)),
+      messages: slice.map((m) => toStreamMessage(m)),
       nextPosition: BigInteger.max(
         BigInteger(-1),
         isEnd
           ? BigInteger(-1)
           : BigInteger(lastMessage!.position).minus(BigInteger(1))
-      ).toString()
+      ).toString(),
     }
   }
 
@@ -401,7 +401,7 @@ export function createInMemoryStreamStore(
         metadata: null,
         truncateBefore: null,
         metadataStreamVersion: -1,
-        streamId: streamId
+        streamId: streamId,
       }
     }
 
@@ -412,7 +412,7 @@ export function createInMemoryStreamStore(
       metadata: message.data.metadata,
       metadataStreamVersion: read.streamVersion,
       truncateBefore: message.data.truncateBefore || null,
-      streamId
+      streamId,
     }
   }
 
@@ -432,11 +432,11 @@ export function createInMemoryStreamStore(
       maxAge: opts.maxAge || null,
       maxCount: opts.maxCount || null,
       truncateBefore:
-        typeof opts.truncateBefore === 'number' ? opts.truncateBefore : null
+        typeof opts.truncateBefore === 'number' ? opts.truncateBefore : null,
     }
     const metaMsgId = newRandomUuid()
     const result = await appendToStreamInternal(metaStreamId, expectedVersion, [
-      NewStreamMessage.of(metaMsgId, OperationalMessageType.Metadata, data)
+      NewStreamMessage.of(metaMsgId, OperationalMessageType.Metadata, data),
     ])
 
     await scavengeStreamInternal(
@@ -446,7 +446,7 @@ export function createInMemoryStreamStore(
       data.truncateBefore
     )
     return {
-      currentVersion: result.streamVersion
+      currentVersion: result.streamVersion,
     }
   }
 
@@ -505,7 +505,7 @@ export function createInMemoryStreamStore(
     stream.appendToStream(expectedVersion, newMessages)
     return {
       streamPosition: stream.position.toString(),
-      streamVersion: stream.streamVersion
+      streamVersion: stream.streamVersion,
     }
   }
 
@@ -524,7 +524,7 @@ export function createInMemoryStreamStore(
     subscriptionOptions?: StreamSubscriptionOptions
   ): Promise<StreamSubscription> {
     assertNotDisposed()
-    return new Promise<StreamSubscription>(resolve => {
+    return new Promise<StreamSubscription>((resolve) => {
       const subscription = createStreamSubscription(
         streamId,
         store,
@@ -540,7 +540,7 @@ export function createInMemoryStreamStore(
             await callSubscriptionOptionsDisposer(subscriptionOptions)
             subscriptions.splice(subscriptions.indexOf(subscription), 1)
             resolve(subscription)
-          }
+          },
         }
       )
       subscriptions.push(subscription)
@@ -560,7 +560,7 @@ export function createInMemoryStreamStore(
     subscriptionOptions?: AllSubscriptionOptions
   ): Promise<AllSubscription> {
     assertNotDisposed()
-    return new Promise<AllSubscription>(resolve => {
+    return new Promise<AllSubscription>((resolve) => {
       const subscription = createAllSubscription(
         store,
         notifier,
@@ -575,7 +575,7 @@ export function createInMemoryStreamStore(
             await callSubscriptionOptionsDisposer(subscriptionOptions)
             subscriptions.splice(subscriptions.indexOf(subscription), 1)
             resolve(subscription)
-          }
+          },
         }
       )
       subscriptions.push(subscription)
@@ -610,7 +610,7 @@ export function createInMemoryStreamStore(
           newDeterministicUuid(`${streamId}.deleted.${expectedVersion}`),
           OperationalMessageType.StreamDeleted,
           createStreamDeletedPayload(streamId)
-        )
+        ),
       ]
     )
   }
@@ -642,7 +642,7 @@ export function createInMemoryStreamStore(
       throw new DisposedError('The stream store has already been disposed.')
     }
     disposed = true
-    await Promise.all(subscriptions.map(s => s.dispose()))
+    await Promise.all(subscriptions.map((s) => s.dispose()))
     await notifier.dispose()
     streamMap.clear()
   }
@@ -656,12 +656,12 @@ export function createInMemoryStreamStore(
     messages: Array<StreamMessage>
   ): Promise<Array<StreamMessage>> {
     const messageTuples = await Promise.all(
-      messages.map(async message => {
+      messages.map(async (message) => {
         return {
           message,
           maxAge: await readStreamMetadataInternal(message.streamId).then(
-            m => m.maxAge
-          )
+            (m) => m.maxAge
+          ),
         }
       })
     )
@@ -669,7 +669,7 @@ export function createInMemoryStreamStore(
       messageTuples,
       getCurrentTime
     )
-    expired.forEach(m => deleteMessage(m.streamId, m.messageId))
+    expired.forEach((m) => deleteMessage(m.streamId, m.messageId))
     return valid
   }
 
@@ -747,7 +747,7 @@ export function createInMemoryStreamStore(
       type: inMemoryStreamMessage.type,
       createdAt: inMemoryStreamMessage.createdAt,
       data: serializer.deserialize(inMemoryStreamMessage.data),
-      meta: serializer.deserialize(inMemoryStreamMessage.meta)
+      meta: serializer.deserialize(inMemoryStreamMessage.meta),
     }
   }
 

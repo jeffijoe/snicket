@@ -3,7 +3,7 @@ import { streamStoreConfig } from '../cfg'
 
 // Reuse the same DB for convenience.
 export const db = new Pool({
-  ...(streamStoreConfig.pg as any)
+  ...(streamStoreConfig.pg as any),
 })
 
 // Creates a simple read model table setup.

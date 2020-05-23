@@ -5,13 +5,13 @@ import { createClock } from '../../__helpers__/clock'
 test('gets from the cache', async () => {
   const clock = createClock()
   const readStreamMetadataImpl = jest.fn(
-    async streamId =>
+    async (streamId) =>
       ({
         streamId,
         maxAge: 1,
         maxCount: 1,
         metadata: {},
-        metadataStreamVersion: 1
+        metadataStreamVersion: 1,
       } as StreamMetadataResult)
   )
 

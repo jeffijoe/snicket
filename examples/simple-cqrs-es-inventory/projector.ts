@@ -38,9 +38,9 @@ async function processMessage(
     case 'ItemsCheckedInToInventory': {
       const current = await db
         .query('select quantity_in_stock from inventory where id = $1;', [
-          event.id
+          event.id,
         ])
-        .then(r => r.rows[0].quantity_in_stock)
+        .then((r) => r.rows[0].quantity_in_stock)
       await client.query(
         'update inventory set quantity_in_stock = $2, _version = $3 where id = $1;',
         [event.id, current + event.count, version]
@@ -50,9 +50,9 @@ async function processMessage(
     case 'ItemsRemovedFromInventory': {
       const current = await db
         .query('select quantity_in_stock from inventory where id = $1;', [
-          event.id
+          event.id,
         ])
-        .then(r => r.rows[0].quantity_in_stock)
+        .then((r) => r.rows[0].quantity_in_stock)
       await client.query(
         'update inventory set quantity_in_stock = $2, _version = $3 where id = $1;',
         [event.id, current - event.count, version]
@@ -97,7 +97,7 @@ async function main() {
   }
   logger.info('Subscribing at ' + position)
   await store.subscribeToAll(
-    async msg => {
+    async (msg) => {
       const data = msg.data as InventoryItemEvent
       const client = await db.connect()
       try {
@@ -127,13 +127,13 @@ async function main() {
       onSubscriptionDropped: () => {
         logger.error('Subscription dropped. Nothing left to live for.')
         process.exit(1)
-      }
+      },
     }
   )
   logger.info('Subscription started.')
 }
 
-main().catch(err => {
+main().catch((err) => {
   logger.error('Error in main', err)
   process.exitCode = 1
 })

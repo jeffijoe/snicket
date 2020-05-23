@@ -25,7 +25,7 @@ export enum ReadFrom {
   /**
    * Read from the end of the stream.
    */
-  End = -1
+  End = -1,
 }
 
 /**
@@ -74,9 +74,9 @@ export const NewStreamMessage = {
       messageId,
       type,
       data,
-      meta
+      meta,
     }
-  }
+  },
 }
 
 /**
@@ -84,14 +84,14 @@ export const NewStreamMessage = {
  */
 export enum OperationalMessageType {
   StreamDeleted = '$stream-deleted',
-  Metadata = '$stream-metadata'
+  Metadata = '$stream-metadata',
 }
 
 /**
  * Streams used by store operations.
  */
 export enum OperationalStream {
-  Deleted = '$deleted'
+  Deleted = '$deleted',
 }
 
 /**

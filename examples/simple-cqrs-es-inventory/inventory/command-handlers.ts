@@ -2,7 +2,7 @@ import {
   StreamStore,
   ExpectedVersion,
   NewStreamMessage,
-  WrongExpectedVersionError
+  WrongExpectedVersionError,
 } from 'snicket'
 import * as Inventory from './'
 import { readStreamToEnd, toStreamId } from '../infra/util'
@@ -80,8 +80,8 @@ async function load(store: StreamStore, itemId: string) {
     return { state: null, version }
   }
   return {
-    state: messages.map(m => m.data).reduce(Inventory.evolve, undefined),
-    version
+    state: messages.map((m) => m.data).reduce(Inventory.evolve, undefined),
+    version,
   }
 }
 
@@ -95,11 +95,11 @@ async function save(
     toStreamId('InventoryItem', id),
     expectedVersion,
     newEvents.map(
-      e =>
+      (e) =>
         ({
           messageId: uuid.v4(),
           data: e,
-          type: e.type
+          type: e.type,
         } as NewStreamMessage)
     )
   )

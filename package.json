@@ -84,6 +84,9 @@
       "ts": "ts-node"
     }
   },
+  "babel": {
+    "compact": true
+  },
   "jest": {
     "testRegex": "(/__tests__/.*\\.(test|spec))\\.(ts|tsx|js)$",
     "testPathIgnorePatterns": [

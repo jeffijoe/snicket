@@ -24,7 +24,7 @@ export function readStreamTestsFor(
         streamVersion: -1,
         streamPosition: '-1',
         nextVersion: 0,
-        isEnd: true
+        isEnd: true,
       })
 
       await store.appendToStream(streamId, ExpectedVersion.Empty, [])
@@ -34,7 +34,7 @@ export function readStreamTestsFor(
         streamVersion: -1,
         streamPosition: '-1',
         nextVersion: 0,
-        isEnd: true
+        isEnd: true,
       })
 
       await store.appendToStream(
@@ -57,9 +57,9 @@ export function readStreamTestsFor(
             meta: { me: 'ta' },
             createdAt: expect.any(Date),
             type: 'greeting',
-            position: expect.any(String)
-          })
-        ])
+            position: expect.any(String),
+          }),
+        ]),
       })
 
       await store.appendToStream(
@@ -82,9 +82,9 @@ export function readStreamTestsFor(
             meta: { me: 'ta' },
             createdAt: expect.any(Date),
             type: 'greeting',
-            position: expect.any(String)
-          })
-        ])
+            position: expect.any(String),
+          }),
+        ]),
       })
     })
 
@@ -101,14 +101,14 @@ export function readStreamTestsFor(
         streamId: streamId,
         nextVersion: 5,
         streamVersion: 19,
-        isEnd: false
+        isEnd: false,
       })
       expect(page1.messages).toHaveLength(5)
       expect(page1.messages[page1.messages.length - 1].streamVersion).toBe(4)
 
       const page2 = await store.readStream(streamId, page1.nextVersion, 5)
       expect(page2).toMatchObject({
-        nextVersion: 10
+        nextVersion: 10,
       })
       expect(page2.messages[0].messageId).not.toBe(
         page1.messages[page1.messages.length - 1].messageId
@@ -192,7 +192,7 @@ export function readStreamTestsFor(
       expect(allResult.nextVersion).toBe(-1)
       expect(allResult.messages).toEqual([
         ...result1.messages,
-        ...result2.messages
+        ...result2.messages,
       ])
     })
   })
@@ -213,7 +213,7 @@ export function readStreamTestsFor(
       nextVersion: 0,
       streamId,
       streamPosition: '-1',
-      streamVersion: -1
+      streamVersion: -1,
     })
 
     expect(
@@ -229,7 +229,7 @@ export function readStreamTestsFor(
       nextVersion: -1,
       streamId,
       streamPosition: '-1',
-      streamVersion: -1
+      streamVersion: -1,
     })
 
     // No Stream vs Empty should yield the same results
@@ -248,7 +248,7 @@ export function readStreamTestsFor(
       nextVersion: 0,
       streamId,
       streamPosition: '-1',
-      streamVersion: -1
+      streamVersion: -1,
     })
     expect(
       await store.readStream(streamId, ReadFrom.End, 10, ReadDirection.Forward)
@@ -258,7 +258,7 @@ export function readStreamTestsFor(
       nextVersion: 0,
       streamId,
       streamPosition: '-1',
-      streamVersion: -1
+      streamVersion: -1,
     })
 
     expect(
@@ -274,7 +274,7 @@ export function readStreamTestsFor(
       nextVersion: -1,
       streamId,
       streamPosition: '-1',
-      streamVersion: -1
+      streamVersion: -1,
     })
     expect(
       await store.readStream(streamId, ReadFrom.End, 10, ReadDirection.Backward)
@@ -284,7 +284,7 @@ export function readStreamTestsFor(
       nextVersion: -1,
       streamId,
       streamPosition: '-1',
-      streamVersion: -1
+      streamVersion: -1,
     })
   })
 }

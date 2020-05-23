@@ -8,8 +8,8 @@ const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
   pg: {
     ...streamStoreCfg.pg,
-    database: 'read_all_test'
-  }
+    database: 'read_all_test',
+  },
 }
 
 const bootstrapper = createPostgresStreamStoreBootstrapper(cfg)

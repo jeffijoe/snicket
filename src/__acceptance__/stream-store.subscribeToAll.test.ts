@@ -17,7 +17,7 @@ export function subscribeToAllTestsFor(
     return store
   }
 
-  afterEach(() => Promise.all(disposers.map(f => f())).then(teardown))
+  afterEach(() => Promise.all(disposers.map((f) => f())).then(teardown))
 
   test('emits messages over time as they become available', async () => {
     const streamId = v4()
@@ -27,7 +27,7 @@ export function subscribeToAllTestsFor(
     const store = await getStore()
     await store.subscribeToAll(processor, {
       afterPosition: SubscribeAt.Beginning,
-      dispose: disposer
+      dispose: disposer,
     })
     const messages1 = generateMessages(10)
     const appendResult = await store.appendToStream(
@@ -58,7 +58,7 @@ export function subscribeToAllTestsFor(
     const processor2 = jest.fn()
     const store = await getStore()
     await store.subscribeToAll(processor2, {
-      afterPosition: SubscribeAt.End
+      afterPosition: SubscribeAt.End,
     })
     const messages1 = generateMessages(10)
     const appendResult = await store.appendToStream(
@@ -67,7 +67,7 @@ export function subscribeToAllTestsFor(
       messages1
     )
     await store.subscribeToAll(processor1, {
-      afterPosition: SubscribeAt.End
+      afterPosition: SubscribeAt.End,
     })
     const messages2 = generateMessages(90)
     await store.appendToStream(streamId, appendResult.streamVersion, messages2)
@@ -100,10 +100,10 @@ export function subscribeToAllTestsFor(
     )
 
     await store.subscribeToAll(processor1, {
-      afterPosition: SubscribeAt.Beginning
+      afterPosition: SubscribeAt.Beginning,
     })
     await store.subscribeToAll(processor2, {
-      afterPosition: SubscribeAt.Beginning
+      afterPosition: SubscribeAt.Beginning,
     })
 
     await waitUntil(() => processor1.mock.calls.length >= 10)
@@ -123,11 +123,11 @@ export function subscribeToAllTestsFor(
     const messages2 = generateMessages(90)
     await store.appendToStream(streamId, ExpectedVersion.Empty, [
       ...messages1,
-      ...messages2
+      ...messages2,
     ])
     await store.subscribeToAll(processor, {
       afterPosition: '49',
-      onCaughtUpChanged: caughtUpHandler
+      onCaughtUpChanged: caughtUpHandler,
     })
 
     await waitUntil(() => processor.mock.calls.length >= 50)
@@ -150,11 +150,11 @@ export function subscribeToAllTestsFor(
     const messages2 = generateMessages(90)
     await store.appendToStream(streamId, ExpectedVersion.Empty, [
       ...messages1,
-      ...messages2
+      ...messages2,
     ])
     await store.subscribeToAll(processor, {
       afterPosition: 49,
-      onSubscriptionDropped: dropped
+      onSubscriptionDropped: dropped,
     })
 
     await waitUntil(() => dropped.mock.calls.length >= 1)
@@ -168,13 +168,13 @@ export function subscribeToAllTestsFor(
     const errorMock = jest.fn()
     const store = await getStore({
       ...noopLogger,
-      error: errorMock
+      error: errorMock,
     })
 
     const processor = jest.fn()
 
     await store.subscribeToAll(processor, {
-      afterPosition: SubscribeAt.End
+      afterPosition: SubscribeAt.End,
     })
     store.readAll = jest
       .fn(store.readAll)
@@ -194,7 +194,7 @@ export function subscribeToAllTestsFor(
     const dropped = jest.fn()
     const store = await getStore({
       ...noopLogger,
-      error: errorMock
+      error: errorMock,
     })
     store.readHeadPosition = jest
       .fn(store.readHeadPosition)
@@ -204,7 +204,7 @@ export function subscribeToAllTestsFor(
 
     await store.subscribeToAll(processor, {
       afterPosition: SubscribeAt.End,
-      onSubscriptionDropped: dropped
+      onSubscriptionDropped: dropped,
     })
 
     await waitUntil(() => errorMock.mock.calls.length >= 1)

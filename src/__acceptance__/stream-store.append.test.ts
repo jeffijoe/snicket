@@ -1,10 +1,9 @@
 import {
   StreamStore,
   ExpectedVersion,
-  AppendToStreamResult
+  AppendToStreamResult,
 } from '../types/stream-store'
-import { v4 } from 'uuid'
-import v5 from 'uuid/v5'
+import { v4, v5 } from 'uuid'
 import { InvalidParameterError, WrongExpectedVersionError } from '..'
 import { createResetEvent } from '../utils/reset-event'
 import _ from 'lodash'
@@ -71,7 +70,7 @@ export function appendTestFor(
               ExpectedVersion.Empty,
               generateMessages(2)
             )
-            .then(setResult)
+            .then(setResult),
         ])
       ).rejects.toBeInstanceOf(WrongExpectedVersionError)
       await succeeded.wait()
@@ -98,7 +97,7 @@ export function appendTestFor(
             .then(setResult),
           store
             .appendToStream(streamId, result.streamVersion, generateMessages(2))
-            .then(setResult)
+            .then(setResult),
         ])
       ).rejects.toBeInstanceOf(WrongExpectedVersionError)
       await succeeded.wait()
@@ -124,7 +123,7 @@ export function appendTestFor(
                 result.streamVersion,
                 generateMessages(2)
               )
-              .then(r => (result = r))
+              .then((r) => (result = r))
               .then(succeeded.set)
           )
         )
@@ -147,10 +146,10 @@ export function appendTestFor(
 
       await store
         .appendToStream(streamId, ExpectedVersion.Any, generateMessages(2))
-        .then(r => (result = r))
+        .then((r) => (result = r))
       result = await store
         .appendToStream(streamId, ExpectedVersion.Any, generateMessages(2))
-        .then(r => (result = r))
+        .then((r) => (result = r))
       expect(result.streamVersion).toBe(8)
     })
 

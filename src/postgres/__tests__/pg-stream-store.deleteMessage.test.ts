@@ -8,8 +8,8 @@ const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
   pg: {
     ...streamStoreCfg.pg,
-    database: 'delete_message_test'
-  }
+    database: 'delete_message_test',
+  },
 }
 const bootstrapper = createPostgresStreamStoreBootstrapper(cfg)
 deleteMessageTestFor(async () => {

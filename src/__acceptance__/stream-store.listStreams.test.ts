@@ -28,9 +28,9 @@ export function listStreamsTestsFor(
     expect(firstPage.streamIds).toHaveLength(10)
     // Assert the stream IDs point to the streams we created.
     await Promise.all(
-      firstPage.streamIds.map(streamId =>
+      firstPage.streamIds.map((streamId) =>
         expect(
-          store.readStream(streamId, 0, 10).then(r => r.messages)
+          store.readStream(streamId, 0, 10).then((r) => r.messages)
         ).resolves.toHaveLength(5)
       )
     )
@@ -38,9 +38,9 @@ export function listStreamsTestsFor(
     const secondPage = await store.listStreams(15, firstPage.cursor)
     expect(secondPage.streamIds).toHaveLength(10)
     await Promise.all(
-      secondPage.streamIds.map(streamId =>
+      secondPage.streamIds.map((streamId) =>
         expect(
-          store.readStream(streamId, 0, 10).then(r => r.messages)
+          store.readStream(streamId, 0, 10).then((r) => r.messages)
         ).resolves.toHaveLength(5)
       )
     )
