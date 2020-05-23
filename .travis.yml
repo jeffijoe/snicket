@@ -6,17 +6,18 @@ cache:
 services:
   - postgresql
 addons:
-  postgresql: "9.6"
+  postgresql: '9.6'
 env:
   global:
     - PGPORT=5432
 
 # Add additional versions here as appropriate.
 node_js:
-  - "stable"
-  - "12"
-  - "10"
-  - "8"
+  - 'stable'
+  - '14'
+  - '12'
+  - '10'
+  - '8'
 
 # Lint errors should trigger a failure.
 before_script:
@@ -42,4 +43,4 @@ jobs:
       deploy:
         provider: script
         skip_cleanup: true
-        script: "npx semantic-release"
+        script: 'npx semantic-release'
