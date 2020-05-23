@@ -30,7 +30,9 @@ export function createPostgresStreamStoreBootstrapper(
         await createDbIfNotExist()
         return await setupPostgresSchema()
       } catch (err) {
+        /* istanbul ignore next */
         logger.error(err)
+        /* istanbul ignore next */
         throw err
       }
     },

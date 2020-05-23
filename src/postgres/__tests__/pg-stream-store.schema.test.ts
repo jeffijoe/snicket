@@ -36,6 +36,7 @@ describe('schema', () => {
     await expect(append(streamStore)).rejects.toMatchObject({
       message: expect.stringContaining('schematest'),
     })
+    await streamStore.dispose()
   })
 })
 
