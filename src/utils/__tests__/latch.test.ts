@@ -1,4 +1,5 @@
 import { createDuplexLatch } from '../latch'
+import { delay } from '../promise-util'
 
 test('resolves wait() when latch reaches 0', async () => {
   const latch = createDuplexLatch()
@@ -28,7 +29,3 @@ test('resolves wait() when 0 immediately', async () => {
   latch.exit()
   await latch.wait()
 })
-
-function delay(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms))
-}

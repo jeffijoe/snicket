@@ -1,4 +1,5 @@
 import { createResetEvent } from '../reset-event'
+import { delay } from '../promise-util'
 
 test('waits', async () => {
   const e = createResetEvent()
@@ -18,7 +19,3 @@ test('waits', async () => {
   await p3
   expect(called).toHaveBeenCalledTimes(4)
 })
-
-function delay(ms: number) {
-  return new Promise((r) => setTimeout(r, ms))
-}
