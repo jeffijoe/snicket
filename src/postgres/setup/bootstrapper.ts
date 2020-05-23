@@ -21,28 +21,31 @@ export function createPostgresStreamStoreBootstrapper(
     /**
      * Bootstraps the Stream Store database.
      */
-    bootstrap() {
+    async bootstrap() {
       logger.trace(
         `Bootstrapping a Snicket database in ${config.pg.database} with schema name ${config.pg.schema}`
       )
-      return dropDatabaseIfTest()
-        .then(() => createDbIfNotExist())
-        .then(() => setupPostgresSchema())
-        .catch(
-          /* istanbul ignore next */
-          (err) => {
-            logger.error(err)
-            throw err
-          }
-        )
+      try {
+        await dropDatabaseIfTest()
+        await createDbIfNotExist()
+        return await setupPostgresSchema()
+      } catch (err) {
+        logger.error(err)
+        throw err
+      }
     },
 
     /**
      * Gets the Snicket PG schema version.
      */
-    getSchemaInfo() {
+    async getSchemaInfo() {
       const pool = createPostgresPool(config.pg)
-      return getSchemaInfo(pool)
+      try {
+        const info = await getSchemaInfo(pool)
+        return info
+      } finally {
+        await pool.end()
+      }
     },
 
     /**
