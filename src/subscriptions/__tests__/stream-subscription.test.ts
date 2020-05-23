@@ -9,7 +9,7 @@ import { StreamMessage } from '../../types/messages'
 import { noopLogger } from '../../logging/noop'
 
 const streamId = v4()
-const messages: StreamMessage[] = _.range(1, 11).map<StreamMessage>(i => ({
+const messages: StreamMessage[] = _.range(1, 11).map<StreamMessage>((i) => ({
   messageId: v4(),
   data: { i },
   causationId: v4(),
@@ -20,7 +20,7 @@ const messages: StreamMessage[] = _.range(1, 11).map<StreamMessage>(i => ({
   streamId: streamId,
   streamVersion: i - 1,
   streamType: 'test',
-  type: 'test'
+  type: 'test',
 }))
 
 let disposer: jest.Mock
@@ -46,7 +46,7 @@ beforeEach(() => {
     setStreamMetadata: null as any,
     deleteMessage: null as any,
     deleteStream: null as any,
-    subscribeToAll: null as any
+    subscribeToAll: null as any,
   }
   readHeadPositionMock.mockReturnValue(_.last(messages)!.position.toString())
   readStreamMock
@@ -59,7 +59,7 @@ beforeEach(() => {
       streamType: 'test',
       streamVersion: 9,
       maxAge: null,
-      maxCount: null
+      maxCount: null,
     } as ReadStreamResult)
     .mockReturnValueOnce({
       streamId,
@@ -70,7 +70,7 @@ beforeEach(() => {
       streamType: 'test',
       streamVersion: 9,
       maxAge: null,
-      maxCount: null
+      maxCount: null,
     } as ReadStreamResult)
     .mockReturnValue({
       streamId,
@@ -81,7 +81,7 @@ beforeEach(() => {
       streamType: 'test',
       streamVersion: 9,
       maxAge: null,
-      maxCount: null
+      maxCount: null,
     } as ReadStreamResult)
 })
 
@@ -100,7 +100,7 @@ test('basic', async () => {
       afterVersion: SubscribeAt.Beginning,
       dispose: disposer,
       maxCountPerRead: 5,
-      onSubscriptionDropped: subscriptionDropped
+      onSubscriptionDropped: subscriptionDropped,
     }
   )
 

@@ -1,6 +1,6 @@
 import {
   createPostgresStreamStoreBootstrapper,
-  PgStreamStoreConfig
+  PgStreamStoreConfig,
 } from '../postgres'
 import { createConsoleLogger } from '../logging/console'
 import { DEFAULT_SNICKET_SCHEMA } from '../postgres/utils/query-util'
@@ -10,7 +10,7 @@ const cmd = process.argv[2]
 if (!cmd) {
   printHelp()
 } else {
-  runCommand(cmd).catch(_e => {
+  runCommand(cmd).catch((_e) => {
     /**/
   })
 }
@@ -27,8 +27,8 @@ async function runCommand(cmd: string) {
       database: getArg('db', 'snicket'),
       schema: getArg('schema', DEFAULT_SNICKET_SCHEMA),
       user: getArg('user', 'postgres'),
-      password: getArg('pass', '')
-    }
+      password: getArg('pass', ''),
+    },
   }
   const bootstrapper = createPostgresStreamStoreBootstrapper(cfg)
   switch (cmd) {
@@ -58,7 +58,7 @@ async function runCommand(cmd: string) {
  * @param defaultValue
  */
 function getArg(name: string, defaultValue: string) {
-  const arg = process.argv.find(x => x.startsWith('--' + name))
+  const arg = process.argv.find((x) => x.startsWith('--' + name))
   if (!arg) {
     return defaultValue
   }

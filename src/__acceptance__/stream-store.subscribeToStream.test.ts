@@ -5,7 +5,7 @@ import {
   Logger,
   noopLogger,
   StreamStore,
-  SubscribeAt
+  SubscribeAt,
 } from '..'
 import { createResetEvent } from '../utils/reset-event'
 import { generateMessages } from '../__helpers__/message-helper'
@@ -24,7 +24,7 @@ export function subscribeToStreamTestsFor(
     return store
   }
 
-  afterEach(() => Promise.all(disposers.map(f => f())).then(teardown))
+  afterEach(() => Promise.all(disposers.map((f) => f())).then(teardown))
 
   test('emits messages over time as they become available', async () => {
     const streamId = v4()
@@ -33,7 +33,7 @@ export function subscribeToStreamTestsFor(
     const disposer = jest.fn()
     await store.subscribeToStream(streamId, processor, {
       afterVersion: SubscribeAt.Beginning,
-      dispose: disposer
+      dispose: disposer,
     })
 
     const messages1 = generateMessages(10)
@@ -63,7 +63,7 @@ export function subscribeToStreamTestsFor(
     const earlier = jest.fn()
     const later = jest.fn()
     await store.subscribeToStream(streamId, earlier, {
-      afterVersion: SubscribeAt.End
+      afterVersion: SubscribeAt.End,
     })
 
     const messages1 = generateMessages(10)
@@ -73,7 +73,7 @@ export function subscribeToStreamTestsFor(
       messages1
     )
     await store.subscribeToStream(streamId, later, {
-      afterVersion: SubscribeAt.End
+      afterVersion: SubscribeAt.End,
     })
     const messages2 = generateMessages(90)
     await store.appendToStream(streamId, appendResult.streamVersion, messages2)
@@ -104,10 +104,10 @@ export function subscribeToStreamTestsFor(
     )
 
     await store.subscribeToStream(streamId, processor1, {
-      afterVersion: SubscribeAt.Beginning
+      afterVersion: SubscribeAt.Beginning,
     })
     await store.subscribeToStream(streamId, processor2, {
-      afterVersion: SubscribeAt.Beginning
+      afterVersion: SubscribeAt.Beginning,
     })
 
     await waitUntil(
@@ -129,11 +129,11 @@ export function subscribeToStreamTestsFor(
     const messages2 = generateMessages(90)
     await store.appendToStream(streamId, ExpectedVersion.Empty, [
       ...messages1,
-      ...messages2
+      ...messages2,
     ])
     await store.subscribeToStream(streamId, processor, {
       afterVersion: 49,
-      onCaughtUpChanged: caughtUpHandler
+      onCaughtUpChanged: caughtUpHandler,
     })
 
     await waitUntil(() => processor.mock.calls.length >= 50)
@@ -148,7 +148,7 @@ export function subscribeToStreamTestsFor(
     const errorMock = jest.fn()
     const store = await getStore({
       ...noopLogger,
-      error: errorMock
+      error: errorMock,
     })
     const processor = jest.fn()
 
@@ -157,14 +157,14 @@ export function subscribeToStreamTestsFor(
     const messages2 = generateMessages(90)
     await store.appendToStream(streamId, ExpectedVersion.Empty, [
       ...messages1,
-      ...messages2
+      ...messages2,
     ])
 
     store.readStream = jest.fn(() => Promise.reject(new Error('Nope')))
 
     await store.subscribeToStream(streamId, processor, {
       afterVersion: SubscribeAt.End,
-      onSubscriptionDropped: dropped
+      onSubscriptionDropped: dropped,
     })
 
     await waitUntil(() => dropped.mock.calls.length >= 1)
@@ -187,11 +187,11 @@ export function subscribeToStreamTestsFor(
     const messages2 = generateMessages(90)
     await store.appendToStream(streamId, ExpectedVersion.Empty, [
       ...messages1,
-      ...messages2
+      ...messages2,
     ])
     await store.subscribeToStream(streamId, processor, {
       afterVersion: 49,
-      onSubscriptionDropped: dropped
+      onSubscriptionDropped: dropped,
     })
 
     await waitUntil(() => dropped.mock.calls.length >= 1)
@@ -205,13 +205,13 @@ export function subscribeToStreamTestsFor(
     const errorMock = jest.fn()
     const store = await getStore({
       ...noopLogger,
-      error: errorMock
+      error: errorMock,
     })
 
     const processor = jest.fn()
 
     await store.subscribeToStream(streamId, processor, {
-      afterVersion: SubscribeAt.End
+      afterVersion: SubscribeAt.End,
     })
     store.readStream = jest
       .fn(store.readStream)
@@ -232,7 +232,7 @@ export function subscribeToStreamTestsFor(
     const dropped = jest.fn()
     const store = await getStore({
       ...noopLogger,
-      error: errorMock
+      error: errorMock,
     })
     store.readStream = jest
       .fn(store.readStream)
@@ -242,7 +242,7 @@ export function subscribeToStreamTestsFor(
 
     await store.subscribeToStream(streamId, processor, {
       afterVersion: SubscribeAt.End,
-      onSubscriptionDropped: dropped
+      onSubscriptionDropped: dropped,
     })
     await waitUntil(() => errorMock.mock.calls.length >= 1)
 
@@ -261,7 +261,7 @@ export function subscribeToStreamTestsFor(
     })
 
     await store.subscribeToStream(streamId, processor, {
-      afterVersion: SubscribeAt.End
+      afterVersion: SubscribeAt.End,
     })
 
     await store.appendToStream(

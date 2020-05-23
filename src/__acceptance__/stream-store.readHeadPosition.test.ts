@@ -27,7 +27,7 @@ export function readHeadPositionTestsFor(
           streamId2,
           ExpectedVersion.Empty,
           generateMessages(10)
-        )
+        ),
       ])
 
       const pos1 = await store.readHeadPosition()
@@ -43,7 +43,7 @@ export function readHeadPositionTestsFor(
           streamId2,
           ExpectedVersion.Any,
           generateMessages(10)
-        )
+        ),
       ])
 
       const pos2 = await store.readHeadPosition()

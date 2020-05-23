@@ -8,11 +8,11 @@ const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
   pg: {
     ...streamStoreCfg.pg,
-    database: 'delete_stream_test'
+    database: 'delete_stream_test',
   },
   notifier: {
-    type: 'pg-notify'
-  }
+    type: 'pg-notify',
+  },
 }
 
 const bootstrapper = createPostgresStreamStoreBootstrapper(cfg)

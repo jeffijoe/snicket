@@ -22,7 +22,7 @@ export function createMetadataCache(
   const cache = new Map<string, CacheEntry>()
   const getActualCurrentTime = () => getCurrentTime() || new Date()
   return {
-    readStreamMetadata
+    readStreamMetadata,
   }
 
   /**
@@ -41,7 +41,7 @@ export function createMetadataCache(
 
     const newEntry: CacheEntry = {
       expiresAt: new Date(getActualCurrentTime().getTime() + ttl * 1000),
-      resultPromise: readStreamMetadataImpl(streamId)
+      resultPromise: readStreamMetadataImpl(streamId),
     }
     cache.set(streamId, newEntry)
     return newEntry.resultPromise

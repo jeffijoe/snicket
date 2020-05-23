@@ -12,5 +12,5 @@ export const noopLogger: Logger = {
   debug: noop,
   info: noop,
   error: noop,
-  warn: noop
+  warn: noop,
 }

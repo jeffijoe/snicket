@@ -7,13 +7,13 @@ export const streamStoreConfig: PgStreamStoreConfig = {
   // This is faster than the polling notifier.
   notifier: {
     type: 'pg-notify',
-    keepAliveInterval: 1000 * 60 * 5
+    keepAliveInterval: 1000 * 60 * 5,
   },
   pg: {
     host: 'localhost',
     user: 'postgres',
     password: '',
     database: 'inventory',
-    port: 20091
-  }
+    port: 20091,
+  },
 }

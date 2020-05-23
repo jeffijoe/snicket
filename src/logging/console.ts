@@ -7,7 +7,7 @@ const levels: Array<LogLevel> = [
   'info',
   'warn',
   'error',
-  'off'
+  'off',
 ]
 const emojis: Record<LogLevel, string> = {
   trace: '🕵️‍ ',
@@ -15,7 +15,7 @@ const emojis: Record<LogLevel, string> = {
   info: 'ℹ️ ',
   warn: '⚠️ ',
   error: '🚨',
-  off: ''
+  off: '',
 }
 
 /* istanbul ignore next */
@@ -38,7 +38,7 @@ export function createConsoleLogger(
     debug: makeLogMethod('debug'),
     info: makeLogMethod('info'),
     warn: makeLogMethod('warn'),
-    error: makeLogMethod('error')
+    error: makeLogMethod('error'),
   }
 
   function makeLogMethod(level: keyof Logger) {

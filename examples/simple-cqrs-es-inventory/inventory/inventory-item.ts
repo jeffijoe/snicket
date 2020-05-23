@@ -11,7 +11,7 @@ export interface InventoryItem {
 export const initialState: InventoryItem = {
   id: '',
   activated: false,
-  itemCount: 0
+  itemCount: 0,
 }
 
 // The left-fold
@@ -24,22 +24,22 @@ export function evolve(
       return {
         ...state,
         id: event.id,
-        activated: true
+        activated: true,
       }
     case 'ItemsCheckedInToInventory':
       return {
         ...state,
-        itemCount: state.itemCount + event.count
+        itemCount: state.itemCount + event.count,
       }
     case 'ItemsRemovedFromInventory':
       return {
         ...state,
-        itemCount: state.itemCount - event.count
+        itemCount: state.itemCount - event.count,
       }
     case 'InventoryItemDeactivated':
       return {
         ...state,
-        activated: false
+        activated: false,
       }
   }
   return state
@@ -53,8 +53,8 @@ export function create(
     {
       type: 'InventoryItemCreated',
       id: cmd.id,
-      name: cmd.name
-    }
+      name: cmd.name,
+    },
   ]
 }
 export function rename(
@@ -64,8 +64,8 @@ export function rename(
     {
       type: 'InventoryItemRenamed',
       id: cmd.id,
-      newName: cmd.name
-    }
+      newName: cmd.name,
+    },
   ]
 }
 export function checkIn(
@@ -78,8 +78,8 @@ export function checkIn(
     {
       id: cmd.id,
       type: 'ItemsCheckedInToInventory',
-      count: cmd.count
-    }
+      count: cmd.count,
+    },
   ]
 }
 export function remove(
@@ -96,8 +96,8 @@ export function remove(
     {
       id: cmd.id,
       type: 'ItemsRemovedFromInventory',
-      count: cmd.count
-    }
+      count: cmd.count,
+    },
   ]
 }
 export function deactivate(
@@ -112,7 +112,7 @@ export function deactivate(
     {
       id: cmd.id,
       type: 'InventoryItemDeactivated',
-      reason: cmd.reason
-    }
+      reason: cmd.reason,
+    },
   ]
 }

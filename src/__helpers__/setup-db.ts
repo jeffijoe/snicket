@@ -4,7 +4,7 @@ import { createConsoleLogger } from '../logging/console'
 
 createPostgresStreamStoreBootstrapper({
   ...streamStoreCfg,
-  logger: createConsoleLogger((process.env.LOG_LEVEL as any) || 'error')
+  logger: createConsoleLogger((process.env.LOG_LEVEL as any) || 'error'),
 })
   .bootstrap()
   .catch(() => process.exit(1))

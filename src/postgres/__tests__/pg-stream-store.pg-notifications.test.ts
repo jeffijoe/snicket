@@ -15,12 +15,12 @@ const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
   notifier: {
     type: 'pg-notify',
-    keepAliveInterval: 10
+    keepAliveInterval: 10,
   },
   pg: {
     ...streamStoreCfg.pg,
-    database: 'pg-notifications-test'
-  }
+    database: 'pg-notifications-test',
+  },
 }
 
 let store: PgStreamStore
@@ -43,7 +43,7 @@ test('can use the postgres notifier', async () => {
   const disposer = jest.fn()
   await store.subscribeToAll(processor, {
     afterPosition: SubscribeAt.Beginning,
-    dispose: disposer
+    dispose: disposer,
   })
   const messages1 = generateMessages(10)
   const appendResult = await store.appendToStream(
@@ -77,16 +77,16 @@ test('pg notifier is faster than polling', async () => {
     ...cfg,
     notifier: {
       type: 'poll',
-      pollingInterval: 200 // This is a relatively high frequency for polling
-    }
+      pollingInterval: 200, // This is a relatively high frequency for polling
+    },
   })
 
   const pgNotifyStore = createPostgresStreamStore({
     ...cfg,
     notifier: {
       type: 'pg-notify',
-      keepAliveInterval: 5000
-    }
+      keepAliveInterval: 5000,
+    },
   })
   let last = ''
   const pgNotifyHandler = jest.fn(async () => {
@@ -118,6 +118,6 @@ test('pg notifier is faster than polling', async () => {
   await Promise.all([
     appendStore.dispose(),
     pollingStore.dispose(),
-    pgNotifyStore.dispose()
+    pgNotifyStore.dispose(),
   ])
 })

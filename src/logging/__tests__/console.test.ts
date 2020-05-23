@@ -2,7 +2,7 @@ import { createConsoleLogger } from '../console'
 
 test('calls the proper method', () => {
   const con = {
-    log: jest.fn()
+    log: jest.fn(),
   }
   const logger = createConsoleLogger('trace', con)
 
@@ -35,7 +35,7 @@ test('calls the proper method', () => {
 
 test('respects log level', () => {
   const con = {
-    log: jest.fn()
+    log: jest.fn(),
   }
   const logger = createConsoleLogger(undefined, con)
 

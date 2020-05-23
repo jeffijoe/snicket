@@ -1,5 +1,4 @@
-import v4 from 'uuid/v4'
-import v5 from 'uuid/v5'
+import { v4, v5 } from 'uuid'
 
 // If you copy this code, CHANGE THE NAMESPACE!
 const namespace = '42d11719-ef3b-4a2c-a10f-df8f84ae73a3'

@@ -3,7 +3,7 @@ import { retry, RetryOptions } from 'fejl'
 import {
   DisposedError,
   InvalidParameterError,
-  WrongExpectedVersionError
+  WrongExpectedVersionError,
 } from '../errors/errors'
 import { noopLogger } from '../logging/noop'
 import { createMetadataCache } from '../infra/metadata-cache'
@@ -19,7 +19,7 @@ import {
   OperationalStream,
   ReadFrom,
   StreamMessage,
-  StreamVersion
+  StreamVersion,
 } from '../types/messages'
 import {
   AppendToStreamResult,
@@ -31,7 +31,7 @@ import {
   SetStreamMetadataOptions,
   SetStreamMetadataResult,
   StreamMetadataResult,
-  StreamStore
+  StreamStore,
 } from '../types/stream-store'
 import {
   AllSubscription,
@@ -41,7 +41,7 @@ import {
   StreamSubscription,
   StreamSubscriptionOptions,
   Subscription,
-  SubscriptionOptions
+  SubscriptionOptions,
 } from '../types/subscriptions'
 import { groupBy, uniq } from '../utils/array-util'
 import { filterExpiredMessages } from '../utils/filter-expired'
@@ -74,13 +74,13 @@ export function createPostgresStreamStore(
     config.gapReloadDelay || /* istanbul ignore next */ 5000
   const gapReloadTimes = config.gapReloadTimes || /* istanbul ignore next */ 1
   const notifierConfig = config.notifier || {
-    type: 'poll'
+    type: 'poll',
   }
   const scavengeSynchronously = !!config.scavengeSynchronously
   const readingConfig: ReadingConfig = {
     filterExpiredMessages: false,
     metadataCacheTtl: 60,
-    ...config.reading
+    ...config.reading,
   }
   const getCurrentTime = config.getCurrentTime || (() => null)
   const metadataCache = readingConfig.filterExpiredMessages
@@ -105,7 +105,7 @@ export function createPostgresStreamStore(
     factor: 1.05,
     tries: 50,
     minTimeout: 0,
-    maxTimeout: 50
+    maxTimeout: 50,
   }
 
   const store: StreamStore = {
@@ -120,7 +120,7 @@ export function createPostgresStreamStore(
     subscribeToAll,
     deleteMessage,
     deleteStream,
-    dispose
+    dispose,
   }
 
   return store
@@ -149,14 +149,14 @@ export function createPostgresStreamStore(
           current_version,
           current_position,
           max_age,
-          max_count
+          max_count,
         } = await insertMessages(streamId, expectedVersion, newMessages)
 
         return {
           streamPosition: current_position,
           streamVersion: current_version,
           maxAge: max_age,
-          maxCount: max_count
+          maxCount: max_count,
         }
       } catch (error) {
         throw handlePotentialWrongExpectedVersionError(
@@ -199,18 +199,18 @@ export function createPostgresStreamStore(
     cursor = invariant.validateListStreamsRequest(maxCount, cursor)
     const result = await pool
       .query(scripts.listStreams(maxCount, cursor))
-      .then(r => r.rows)
+      .then((r) => r.rows)
     if (result.length === 0) {
       return {
         cursor: '0',
-        streamIds: []
+        streamIds: [],
       }
     }
 
     const lastRow = result[result.length - 1]
     return {
       cursor: lastRow.id_internal,
-      streamIds: result.map(x => x.stream_id)
+      streamIds: result.map((x) => x.stream_id),
     }
   }
 
@@ -266,7 +266,7 @@ export function createPostgresStreamStore(
         streamPosition: '-1',
         streamVersion: -1,
         isEnd: true,
-        messages: []
+        messages: [],
       }
     }
 
@@ -288,7 +288,7 @@ export function createPostgresStreamStore(
     const filtered = await maybeFilterExpiredMessages(streamResult.messages)
     return {
       ...streamResult,
-      messages: filtered
+      messages: filtered,
     }
   }
 
@@ -349,7 +349,7 @@ export function createPostgresStreamStore(
         messages: [],
         nextPosition: forward
           ? fromPositionInclusive.toString()
-          : /* istanbul ignore next */ '-1'
+          : /* istanbul ignore next */ '-1',
       }
     }
 
@@ -363,9 +363,7 @@ export function createPostgresStreamStore(
 
     const lastMessage = messages[messages.length - 1]
     const nextPosition = forward
-      ? BigInteger(lastMessage.position)
-          .plus(BigInteger.one)
-          .toString()
+      ? BigInteger(lastMessage.position).plus(BigInteger.one).toString()
       : // nextVersion will be 0 at the end, but that always includes the first message in
         // the stream. There's no way around this that does not skip the first message.
         BigInteger.max(
@@ -376,7 +374,7 @@ export function createPostgresStreamStore(
     return {
       isEnd,
       nextPosition,
-      messages: await maybeFilterExpiredMessages(messages)
+      messages: await maybeFilterExpiredMessages(messages),
     }
   }
 
@@ -402,7 +400,7 @@ export function createPostgresStreamStore(
         metadataStreamVersion: -1,
         maxAge: null,
         truncateBefore: null,
-        maxCount: null
+        maxCount: null,
       }
     }
 
@@ -413,7 +411,7 @@ export function createPostgresStreamStore(
       streamId: streamId,
       maxAge: message.data.maxAge || null,
       truncateBefore: message.data.truncateBefore,
-      maxCount: message.data.maxCount || null
+      maxCount: message.data.maxCount || null,
     }
   }
 
@@ -435,12 +433,12 @@ export function createPostgresStreamStore(
         maxAge: opts.maxAge || null,
         maxCount: opts.maxCount || null,
         truncateBefore:
-          typeof opts.truncateBefore === 'number' ? opts.truncateBefore : null
+          typeof opts.truncateBefore === 'number' ? opts.truncateBefore : null,
       }
       const metaMsgId = newRandomUuid()
       const retryableSetStreamMetadata = async (again: Function) => {
         try {
-          return await runInTransaction(pool, trx => {
+          return await runInTransaction(pool, (trx) => {
             return trx
               .query(
                 scripts.setStreamMetadata(
@@ -453,11 +451,11 @@ export function createPostgresStreamStore(
                   {
                     data,
                     messageId: metaMsgId,
-                    type: OperationalMessageType.Metadata
+                    type: OperationalMessageType.Metadata,
                   }
                 )
               )
-              .then(x => x.rows[0])
+              .then((x) => x.rows[0])
           })
         } catch (error) {
           throw handlePotentialWrongExpectedVersionError(
@@ -499,7 +497,7 @@ export function createPostgresStreamStore(
       )
       const retryableDeleteStream = async (again: Function) => {
         try {
-          await runInTransaction(pool, trx =>
+          await runInTransaction(pool, (trx) =>
             trx.query(
               scripts.deleteStream(
                 streamId,
@@ -509,11 +507,11 @@ export function createPostgresStreamStore(
                 {
                   type: OperationalMessageType.StreamDeleted,
                   messageId: deletedMsgId,
-                  data: createStreamDeletedPayload(streamId)
+                  data: createStreamDeletedPayload(streamId),
                 }
               )
             )
-          ).then(r => r.rows[0].delete_stream)
+          ).then((r) => r.rows[0].delete_stream)
         } catch (error) {
           throw handlePotentialWrongExpectedVersionError(
             error,
@@ -556,7 +554,7 @@ export function createPostgresStreamStore(
   ): Promise<void> {
     writeLatch.enter()
     try {
-      await runInTransaction(pool, trx =>
+      await runInTransaction(pool, (trx) =>
         trx.query(scripts.deleteMessages(streamId, messageIds))
       )
       logger.trace(`pg-stream-store: deleted ${messageIds.length} messages`)
@@ -578,7 +576,7 @@ export function createPostgresStreamStore(
     subscriptionOptions?: StreamSubscriptionOptions
   ): Promise<StreamSubscription> {
     assertNotDisposed()
-    return new Promise<StreamSubscription>(resolve => {
+    return new Promise<StreamSubscription>((resolve) => {
       const subscription = createStreamSubscription(
         streamId,
         store,
@@ -594,7 +592,7 @@ export function createPostgresStreamStore(
             await callSubscriptionOptionsDisposer(subscriptionOptions)
             subscriptions.splice(subscriptions.indexOf(subscription), 1)
             resolve(subscription)
-          }
+          },
         }
       )
       subscriptions.push(subscription)
@@ -612,7 +610,7 @@ export function createPostgresStreamStore(
     subscriptionOptions?: AllSubscriptionOptions
   ): Promise<AllSubscription> {
     assertNotDisposed()
-    return new Promise<AllSubscription>(resolve => {
+    return new Promise<AllSubscription>((resolve) => {
       const subscription = createAllSubscription(
         store,
         getNotifier(),
@@ -627,7 +625,7 @@ export function createPostgresStreamStore(
             await callSubscriptionOptionsDisposer(subscriptionOptions)
             subscriptions.splice(subscriptions.indexOf(subscription), 1)
             resolve(subscription)
-          }
+          },
         }
       )
       subscriptions.push(subscription)
@@ -643,7 +641,7 @@ export function createPostgresStreamStore(
     logger.trace(
       'pg-stream-store: dispose called, disposing all subscriptions..'
     )
-    await Promise.all(subscriptions.map(s => s.dispose()))
+    await Promise.all(subscriptions.map((s) => s.dispose()))
     if (notifier) {
       await notifier.dispose()
     }
@@ -674,7 +672,10 @@ export function createPostgresStreamStore(
     // We don't await this.
     Promise.all(
       groupedByStreamId.map(([streamId, messages]) =>
-        deleteMessages(streamId, messages.map(m => m.messageId))
+        deleteMessages(
+          streamId,
+          messages.map((m) => m.messageId)
+        )
       )
     )
       .then(writeLatch.exit)
@@ -705,7 +706,7 @@ export function createPostgresStreamStore(
     expectedVersion: number,
     newMessages: NewStreamMessage[]
   ): Promise<InsertResult> {
-    return runInTransaction(pool, trx => {
+    return runInTransaction(pool, (trx) => {
       return trx
         .query(
           scripts.append(
@@ -716,7 +717,7 @@ export function createPostgresStreamStore(
             newMessages
           )
         )
-        .then(x => x.rows[0])
+        .then((x) => x.rows[0])
     })
   }
 
@@ -747,7 +748,7 @@ export function createPostgresStreamStore(
         return
       }
 
-      const result = await runInTransaction(pool, trx => {
+      const result = await runInTransaction(pool, (trx) => {
         return trx
           .query(
             scripts.getScavengableStreamMessageIds(
@@ -758,7 +759,7 @@ export function createPostgresStreamStore(
               getCurrentTime()
             )
           )
-          .then(x => x.rows.map(m => m.message_id))
+          .then((x) => x.rows.map((m) => m.message_id))
           .then(uniq)
       })
 
@@ -812,12 +813,12 @@ export function createPostgresStreamStore(
       return messages
     }
     const messageTuples = await Promise.all(
-      messages.map(async message => {
+      messages.map(async (message) => {
         return {
           message,
           maxAge: await metadataCache
             .readStreamMetadata(message.streamId)
-            .then(m => m.maxAge)
+            .then((m) => m.maxAge),
         }
       })
     )
@@ -857,7 +858,7 @@ export function createPostgresStreamStore(
             : streamInfo.stream_version) + 1
         : Math.max(-1, (isEnd ? -1 : lastMessage.stream_version) - 1),
       isEnd: isEnd,
-      messages: messages.map(mapMessageResult)
+      messages: messages.map(mapMessageResult),
     } as ReadStreamResult
   }
 
@@ -876,7 +877,7 @@ export function createPostgresStreamStore(
       createdAt: new Date(message.created_at),
       type: message.type,
       position: message.position,
-      streamVersion: message.stream_version
+      streamVersion: message.stream_version,
     }
   }
 

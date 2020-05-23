@@ -8,16 +8,16 @@ test('groupBy', () => {
   const items = [
     {
       group: 'one',
-      value: 'one 1'
+      value: 'one 1',
     },
     {
       group: 'one',
-      value: 'one 2'
+      value: 'one 2',
     },
     {
       group: 'two',
-      value: 'two 1'
-    }
+      value: 'two 1',
+    },
   ]
 
   const grouped = groupBy(items, 'group')

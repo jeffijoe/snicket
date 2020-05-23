@@ -5,6 +5,6 @@ filterExpiredTest(async () => {
   const store = createInMemoryStreamStore()
   return {
     store,
-    nonFilteringStore: store
+    nonFilteringStore: store,
   }
 })

@@ -4,7 +4,7 @@ import {
   NewStreamMessage,
   MessagePosition,
   ReadFrom,
-  StreamVersion
+  StreamVersion,
 } from '../types/messages'
 import { ExpectedVersion, SetStreamMetadataOptions } from '..'
 

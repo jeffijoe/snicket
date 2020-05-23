@@ -22,7 +22,7 @@ export function createPollingNotifier(
   let _disposed = false
 
   // tslint:disable-next-line
-  poll()
+  let p = poll()
 
   return {
     /**
@@ -45,8 +45,9 @@ export function createPollingNotifier(
         'The notifier has already been disposed.'
       )
       _disposed = true
+      await p
       _listeners = []
-    }
+    },
   }
 
   /**

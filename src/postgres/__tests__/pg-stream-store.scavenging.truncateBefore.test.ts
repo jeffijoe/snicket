@@ -5,6 +5,6 @@ import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 scavengingTruncateBeforeTestsFor(async () =>
   createPostgresStreamStore({
     ...streamStoreCfg,
-    scavengeSynchronously: true
+    scavengeSynchronously: true,
   })
 )

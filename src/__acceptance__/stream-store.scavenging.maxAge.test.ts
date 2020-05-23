@@ -8,7 +8,7 @@ export function scavengingMaxAgeTestsFor(
   teardown?: () => Promise<unknown>
 ) {
   let disposers: Array<Function> = []
-  afterEach(() => Promise.all(disposers.map(f => f())).then(teardown))
+  afterEach(() => Promise.all(disposers.map((f) => f())).then(teardown))
 
   test('scavenges stream with a max age on append', async () => {
     const clock = createClock()
@@ -32,7 +32,7 @@ export function scavengingMaxAgeTestsFor(
     // passed since we wrote the first messages, we will still have 5 messages in the stream.
     clock.tick('5s')
     await store.setStreamMetadata(streamId, ExpectedVersion.Empty, {
-      maxAge: 10
+      maxAge: 10,
     })
     read = await store.readStream(streamId, 0, 100)
     expect(read.messages).toHaveLength(5)

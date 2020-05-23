@@ -33,7 +33,7 @@ export function scavengingTruncateBeforeTestsFor(
     expect(read.messages).toHaveLength(10)
 
     await store.setStreamMetadata(streamId, ExpectedVersion.Empty, {
-      truncateBefore: 5
+      truncateBefore: 5,
     })
     read = await store.readStream(streamId, 0, 100)
     expect(read.messages).toHaveLength(5)

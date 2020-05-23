@@ -21,28 +21,33 @@ export function createPostgresStreamStoreBootstrapper(
     /**
      * Bootstraps the Stream Store database.
      */
-    bootstrap() {
+    async bootstrap() {
       logger.trace(
         `Bootstrapping a Snicket database in ${config.pg.database} with schema name ${config.pg.schema}`
       )
-      return dropDatabaseIfTest()
-        .then(() => createDbIfNotExist())
-        .then(() => setupPostgresSchema())
-        .catch(
-          /* istanbul ignore next */
-          err => {
-            logger.error(err)
-            throw err
-          }
-        )
+      try {
+        await dropDatabaseIfTest()
+        await createDbIfNotExist()
+        return await setupPostgresSchema()
+      } catch (err) {
+        /* istanbul ignore next */
+        logger.error(err)
+        /* istanbul ignore next */
+        throw err
+      }
     },
 
     /**
      * Gets the Snicket PG schema version.
      */
-    getSchemaInfo() {
+    async getSchemaInfo() {
       const pool = createPostgresPool(config.pg)
-      return getSchemaInfo(pool)
+      try {
+        const info = await getSchemaInfo(pool)
+        return info
+      } finally {
+        await pool.end()
+      }
     },
 
     /**
@@ -50,7 +55,7 @@ export function createPostgresStreamStoreBootstrapper(
      */
     teardown() {
       return dropPostgresSchema()
-    }
+    },
   }
 
   /**
@@ -64,7 +69,7 @@ export function createPostgresStreamStoreBootstrapper(
     const { database: db } = config.pg
     const pool = createPostgresPool({
       ...config.pg,
-      database: 'postgres'
+      database: 'postgres',
     })
     try {
       logger.trace(
@@ -89,7 +94,7 @@ export function createPostgresStreamStoreBootstrapper(
       const { version } = await getSchemaInfo(pool)
       if (version === 0) {
         logger.trace('Setting up Snicket PG schema v1')
-        await runInTransaction(pool, trx =>
+        await runInTransaction(pool, (trx) =>
           trx.query(replaceSchema(schemaV1.SETUP_SQL))
         ).catch(ignoreErrorIfExists)
       } else {
@@ -116,7 +121,7 @@ export function createPostgresStreamStoreBootstrapper(
 
     const pool = createPostgresPool({
       ...config.pg,
-      database: 'postgres'
+      database: 'postgres',
     })
     try {
       const CLOSE_CONNS_SQL = format(
@@ -149,7 +154,7 @@ export function createPostgresStreamStoreBootstrapper(
     const pool = createPostgresPool(config.pg)
     logger.trace('Dropping the tables, indexes and types.')
     try {
-      await runInTransaction(pool, trx => {
+      await runInTransaction(pool, (trx) => {
         const sql = replaceSchema(schemaV1.TEARDOWN_SQL)
         return trx.query(sql)
       }).catch(ignoreErrorIfNotExists)
@@ -171,11 +176,11 @@ export function createPostgresStreamStoreBootstrapper(
         )
       )
       .catch(ignoreErrorIfNotExists)
-      .then(result => {
+      .then((result) => {
         if (!result || result.rows.length !== 1) return { version: 0 }
         const parsed = JSON.parse(result.rows[0].comment)
         return {
-          version: parsed.snicket_pg_version as number
+          version: parsed.snicket_pg_version as number,
         }
       })
   }

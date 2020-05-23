@@ -21,7 +21,7 @@ export function readAllTestsFor(
     ).toEqual({
       isEnd: true,
       messages: [],
-      nextPosition: '0'
+      nextPosition: '0',
     })
 
     expect(
@@ -29,7 +29,7 @@ export function readAllTestsFor(
     ).toEqual({
       isEnd: true,
       messages: [],
-      nextPosition: '-1'
+      nextPosition: '-1',
     })
 
     // Empty stream or no stream, should be the same result.
@@ -40,7 +40,7 @@ export function readAllTestsFor(
     ).toEqual({
       isEnd: true,
       messages: [],
-      nextPosition: '0'
+      nextPosition: '0',
     })
 
     expect(
@@ -50,7 +50,7 @@ export function readAllTestsFor(
     ).toEqual({
       isEnd: true,
       messages: [],
-      nextPosition: '-1'
+      nextPosition: '-1',
     })
   })
 
@@ -83,7 +83,7 @@ export function readAllTestsFor(
       expect(allResult.isEnd).toBe(true)
       expect(allResult.messages).toEqual([
         ...result1.messages,
-        ...result2.messages
+        ...result2.messages,
       ])
 
       const theEnd = await store.readAll(allResult.nextPosition, 10)
@@ -123,7 +123,7 @@ export function readAllTestsFor(
       expect(allResult.isEnd).toBe(true)
       expect(allResult.messages).toEqual([
         ...result1.messages,
-        ...result2.messages
+        ...result2.messages,
       ])
     })
   })

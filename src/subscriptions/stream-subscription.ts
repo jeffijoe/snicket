@@ -4,7 +4,7 @@ import {
   StreamStoreNotifier,
   StreamSubscription,
   SubscribeAt,
-  MessageProcessor
+  MessageProcessor,
 } from '../types/subscriptions'
 import { createResetEvent } from '../utils/reset-event'
 import { DisposedError } from '../errors/errors'
@@ -50,7 +50,7 @@ export function createStreamSubscription(
     afterVersion: SubscribeAt.End,
     onSubscriptionDropped: noop,
     maxCountPerRead: 20,
-    ...cfg
+    ...cfg,
   }
 
   // Called after having read the start position.
@@ -61,7 +61,7 @@ export function createStreamSubscription(
 
   return {
     streamId,
-    dispose
+    dispose,
   }
 
   async function pullAndPush() {
@@ -86,7 +86,7 @@ export function createStreamSubscription(
     loopLatch.enter()
     try {
       await retry((again, attempt) =>
-        pullAndPushInternal().catch(err => {
+        pullAndPushInternal().catch((err) => {
           logger.error(
             `Error occurred in subscription while pulling messages; retrying (${attempt}).`,
             err
@@ -134,7 +134,8 @@ export function createStreamSubscription(
           ((lastHasCaughtUp === null && isEnd) ||
             // Or we haven't reported any catch-up status or the status has
             // changed since the last time we reported..
-            (lastHasCaughtUp === null || lastHasCaughtUp !== isEnd)) &&
+            lastHasCaughtUp === null ||
+            lastHasCaughtUp !== isEnd) &&
           // And we got stuff back
           readResult.messages.length > 0
         ) {

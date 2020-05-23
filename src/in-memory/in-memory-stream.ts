@@ -69,7 +69,7 @@ export function createInMemoryStream(
     messages,
     appendToStream,
     deleteMessage,
-    deleteAllMessages
+    deleteAllMessages,
   }
 
   return stream
@@ -98,7 +98,7 @@ export function createInMemoryStream(
     if (currentVersion >= 0 && expectedVersion < currentVersion) {
       // Expected version is less than current version, check idempotency.
       const startPos = messages.findIndex(
-        m => m.streamVersion >= expectedVersion
+        (m) => m.streamVersion >= expectedVersion
       )
 
       /* istanbul ignore next: this shouldn't happen */
@@ -116,7 +116,7 @@ export function createInMemoryStream(
 
     // At this point, we've established that expectedVersion == currentVersion
     // Check for duplicate IDs.
-    if (newMessages.some(n => messageMap.has(n.messageId))) {
+    if (newMessages.some((n) => messageMap.has(n.messageId))) {
       throw new WrongExpectedVersionError()
     }
 
@@ -138,7 +138,7 @@ export function createInMemoryStream(
       }
 
       // The first message was not found in the stream, so if any others are, it's an issue.
-      if (newMessages.some(m => messageMap.has(m.messageId))) {
+      if (newMessages.some((m) => messageMap.has(m.messageId))) {
         throw new WrongExpectedVersionError()
       }
     }
@@ -163,7 +163,7 @@ export function createInMemoryStream(
   ) {
     const existingIdsSlice = messages
       .slice(startPos, startPos + newMessages.length)
-      .map(m => m.messageId)
+      .map((m) => m.messageId)
     if (newMessages.length > existingIdsSlice.length) {
       throw new WrongExpectedVersionError()
     }
@@ -189,7 +189,7 @@ export function createInMemoryStream(
         createdAt: getCurrentTime(),
         type: newMessage.type,
         data: serializer.serialize(newMessage.data),
-        meta: serializer.serialize(newMessage.meta || {})
+        meta: serializer.serialize(newMessage.meta || {}),
       }
 
       messages.push(inMemoryMessage)
@@ -200,6 +200,6 @@ export function createInMemoryStream(
   }
 
   function deleteAllMessages() {
-    messages.slice().forEach(m => deleteMessage(m.messageId))
+    messages.slice().forEach((m) => deleteMessage(m.messageId))
   }
 }

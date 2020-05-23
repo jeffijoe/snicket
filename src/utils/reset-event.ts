@@ -8,7 +8,7 @@ export function createResetEvent(initial = false): ResetEvent {
   return {
     set,
     reset,
-    wait
+    wait,
   }
 
   function set() {
@@ -21,7 +21,7 @@ export function createResetEvent(initial = false): ResetEvent {
   }
 
   function wait() {
-    const p = new Promise<void>(r => _resolves.push(r))
+    const p = new Promise<void>((r) => _resolves.push(r))
     if (_set) {
       trigger()
     }

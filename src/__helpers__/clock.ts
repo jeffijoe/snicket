@@ -11,6 +11,6 @@ export function createClock(start: Date = new Date()) {
     get: () => time,
     tick: (amount = '1s') => {
       time = new Date(time.getTime() + ms(amount))
-    }
+    },
   }
 }

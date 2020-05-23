@@ -8,8 +8,8 @@ const cfg: PgStreamStoreConfig = {
   ...streamStoreCfg,
   pg: {
     ...streamStoreCfg.pg,
-    database: 'filter_expired_test'
-  }
+    database: 'filter_expired_test',
+  },
 }
 
 const bootstrapper = createPostgresStreamStoreBootstrapper(cfg)
@@ -21,12 +21,12 @@ filterExpiredTest(async () => {
       ...cfg,
       reading: {
         filterExpiredMessages: true,
-        metadataCacheTtl: 5
-      }
+        metadataCacheTtl: 5,
+      },
     }),
 
     nonFilteringStore: createPostgresStreamStore({
-      ...cfg
-    })
+      ...cfg,
+    }),
   }
 }, bootstrapper.teardown)

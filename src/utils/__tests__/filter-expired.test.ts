@@ -15,12 +15,12 @@ test('filters expired messages and reports them', async () => {
     createdAt: new Date(now.getTime() - (10 - i) * 60000),
     position: (i + 1).toString(),
     streamVersion: i + 1,
-    meta: {}
+    meta: {},
   }))
 
-  const tuples = allMessages.map(message => ({
+  const tuples = allMessages.map((message) => ({
     message,
-    maxAge: ms('5 minutes') / 1000
+    maxAge: ms('5 minutes') / 1000,
   }))
   const { valid, expired } = filterExpiredMessages(tuples, () => now)
 
@@ -40,12 +40,12 @@ test('skips meta messages', async () => {
     createdAt: new Date(now.getTime() - (10 - i) * 60000),
     position: (i + 1).toString(),
     streamVersion: i + 1,
-    meta: {}
+    meta: {},
   }))
 
-  const tuples = allMessages.map(message => ({
+  const tuples = allMessages.map((message) => ({
     message,
-    maxAge: ms('5 minutes') / 1000
+    maxAge: ms('5 minutes') / 1000,
   }))
   const { valid, expired } = filterExpiredMessages(tuples, () => now)
 
@@ -65,12 +65,12 @@ test('skips messages with no max count item', async () => {
     createdAt: new Date(now.getTime() - (10 - i) * 60000),
     position: (i + 1).toString(),
     streamVersion: i + 1,
-    meta: {}
+    meta: {},
   }))
 
-  const tuples = allMessages.map(message => ({
+  const tuples = allMessages.map((message) => ({
     message,
-    maxAge: null
+    maxAge: null,
   }))
   const { valid, expired } = filterExpiredMessages(tuples, () => now)
 

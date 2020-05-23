@@ -4,7 +4,7 @@ import { v4 } from 'uuid'
 import { generateMessages } from '../__helpers__/message-helper'
 import {
   waitForStreamSubscription,
-  waitForAllSubscription
+  waitForAllSubscription,
 } from '../__helpers__/wait-helper'
 
 export function serializationTestsFor(
@@ -24,24 +24,24 @@ export function serializationTestsFor(
       {
         ...generateMessages(1)[0],
         data: {
-          itsA: new Date(10)
+          itsA: new Date(10),
         },
         meta: {
-          metadate: new Date(20)
-        }
+          metadate: new Date(20),
+        },
       },
       {
         ...generateMessages(1)[0],
-        data: [{ wo: 'ah' }]
+        data: [{ wo: 'ah' }],
       },
       {
         ...generateMessages(1)[0],
-        data: 'woah'
+        data: 'woah',
       },
       {
         ...generateMessages(1)[0],
-        data: ['woah']
-      }
+        data: ['woah'],
+      },
     ]
     await store.appendToStream(streamId, ExpectedVersion.Empty, messages)
     const streamPage = await store.readStream(streamId, 0, 10)
@@ -58,13 +58,13 @@ export function serializationTestsFor(
     await waitForStreamSubscription(
       store,
       streamId,
-      msg =>
+      (msg) =>
         msg.data.itsA.valueOf() === new Date(10).valueOf() &&
         msg.meta.metadate.valueOf() === new Date(20).valueOf()
     )
     await waitForAllSubscription(
       store,
-      msg =>
+      (msg) =>
         msg.data.itsA.valueOf() === new Date(10).valueOf() &&
         msg.meta.metadate.valueOf() === new Date(20).valueOf()
     )

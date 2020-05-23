@@ -34,14 +34,14 @@ export function waitForStreamSubscription(
   return new Promise(async (resolve, reject) => {
     const sub = await store.subscribeToStream(
       streamId,
-      async msg => {
+      async (msg) => {
         if (match(msg)) {
           sub.dispose().then(() => resolve(), reject)
         }
       },
       {
         afterVersion: SubscribeAt.Beginning,
-        maxCountPerRead: 500
+        maxCountPerRead: 500,
       }
     )
   })
@@ -59,14 +59,14 @@ export function waitForAllSubscription(
 ) {
   return new Promise(async (resolve, reject) => {
     const sub = await store.subscribeToAll(
-      async msg => {
+      async (msg) => {
         if (match(msg)) {
           sub.dispose().then(() => resolve(), reject)
         }
       },
       {
         afterPosition: SubscribeAt.Beginning,
-        maxCountPerRead: 500
+        maxCountPerRead: 500,
       }
     )
   })

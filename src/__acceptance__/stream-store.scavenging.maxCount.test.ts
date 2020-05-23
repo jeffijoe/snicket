@@ -16,7 +16,7 @@ export function scavengingMaxCountTestsFor(
   test('scavenges stream with a max count on append', async () => {
     const streamId = v4()
     await store.setStreamMetadata(streamId, ExpectedVersion.Empty, {
-      maxCount: 5
+      maxCount: 5,
     })
 
     let write = await store.appendToStream(
@@ -55,7 +55,7 @@ export function scavengingMaxCountTestsFor(
     expect(read.messages).toHaveLength(10)
 
     await store.setStreamMetadata(streamId, ExpectedVersion.Empty, {
-      maxCount: 5
+      maxCount: 5,
     })
 
     read = await store.readStream(streamId, 0, 100)
@@ -84,7 +84,7 @@ export function scavengingMaxCountTestsFor(
       streamId,
       ExpectedVersion.Empty,
       {
-        maxCount: 5
+        maxCount: 5,
       }
     )
 
@@ -92,7 +92,7 @@ export function scavengingMaxCountTestsFor(
     expect(read.messages).toHaveLength(5)
 
     await store.setStreamMetadata(streamId, metaWrite.currentVersion, {
-      maxCount: null
+      maxCount: null,
     })
 
     write = await store.appendToStream(

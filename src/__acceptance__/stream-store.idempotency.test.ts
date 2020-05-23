@@ -67,14 +67,14 @@ export function idempotencyTestsFor(
       await throws(
         store.appendToStream(streamId, ExpectedVersion.Empty, [
           ...messages,
-          ...generateMessages(1)
+          ...generateMessages(1),
         ])
       )
 
       expect(
         await store
           .readStream(streamId, ReadFrom.Start, 100)
-          .then(x => x.messages.length)
+          .then((x) => x.messages.length)
       ).toBe(5)
     })
   })
@@ -96,7 +96,7 @@ export function idempotencyTestsFor(
       expect(
         await store
           .readStream(streamId, ReadFrom.Start, 10)
-          .then(x => x.messages.length)
+          .then((x) => x.messages.length)
       ).toBe(3)
 
       await throws(
@@ -109,7 +109,7 @@ export function idempotencyTestsFor(
       expect(
         await store
           .readStream(streamId, ReadFrom.Start, 10)
-          .then(x => x.messages.length)
+          .then((x) => x.messages.length)
       ).toBe(3)
     })
 
@@ -188,7 +188,7 @@ export function idempotencyTestsFor(
       const err = await throws(
         store.appendToStream(streamId, ExpectedVersion.Any, [
           ...messages.slice(1),
-          ...generateMessages(1)
+          ...generateMessages(1),
         ])
       )
 
@@ -205,7 +205,7 @@ export function idempotencyTestsFor(
         await throws(
           store.appendToStream(streamId, ExpectedVersion.Any, [
             ...messages,
-            ...generateMessages(1)
+            ...generateMessages(1),
           ])
         )
       ).toBeInstanceOf(WrongExpectedVersionError)
@@ -214,7 +214,7 @@ export function idempotencyTestsFor(
         await throws(
           store.appendToStream(streamId, ExpectedVersion.Any, [
             ...generateMessages(1),
-            ...messages
+            ...messages,
           ])
         )
       ).toBeInstanceOf(WrongExpectedVersionError)
@@ -238,7 +238,7 @@ export function idempotencyTestsFor(
       expect(
         await store
           .readStream(streamId, ReadFrom.Start, 10)
-          .then(x => x.messages.length)
+          .then((x) => x.messages.length)
       ).toBe(3)
 
       await throws(
@@ -252,7 +252,7 @@ export function idempotencyTestsFor(
       expect(
         await store
           .readStream(streamId, ReadFrom.Start, 10)
-          .then(x => x.messages.length)
+          .then((x) => x.messages.length)
       ).toBe(3)
     })
 
@@ -357,7 +357,7 @@ export function idempotencyTestsFor(
       const err = await throws(
         store.appendToStream(streamId, appended.streamVersion, [
           ...messages,
-          ...generateMessages(1)
+          ...generateMessages(1),
         ])
       )
       expect(err).toBeInstanceOf(WrongExpectedVersionError)

@@ -49,7 +49,7 @@ app.use(async (ctx: any, next: any) => {
   } catch (err) {
     ctx.status = 500
     ctx.body = {
-      error: err.message
+      error: err.message,
     }
     logger.error('Error in request', err)
   }
@@ -95,17 +95,17 @@ const controller = {
   async listInventory(ctx: any) {
     const count = await db
       .query('select count(id) from inventory')
-      .then(r => r.rows[0].count)
+      .then((r) => r.rows[0].count)
     const result = await db.query(
       'select * from inventory limit 20 offset $1::int',
       [ctx.query.offset || 0]
     )
     ctx.body = {
       count,
-      items: result.rows
+      items: result.rows,
     }
     ctx.status = 200
-  }
+  },
 }
 
 app.use(R.post('/inventory', controller.createItem))
@@ -123,5 +123,5 @@ const server = app.listen(1337, () => {
 gracefulShutdown(server, {
   finally: () => logger.info('Shutting down..'),
   // This bit will drain writes before shutting down.
-  onShutdown: () => store.dispose()
+  onShutdown: () => store.dispose(),
 })
