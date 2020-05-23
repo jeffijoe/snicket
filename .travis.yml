@@ -16,8 +16,7 @@ node_js:
   - 'stable'
   - '14'
   - '12'
-  - '10'
-  - '8'
+  - '10.20'
 
 # Lint errors should trigger a failure.
 before_script:
