@@ -1,8 +1,5 @@
 # Oh yeah!
 language: node_js
-cache:
-  directories:
-    - node_modules
 services:
   - postgresql
 addons:
