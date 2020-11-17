@@ -1,10 +1,6 @@
 import BigInteger from 'big-integer'
 import { retry, RetryOptions } from 'fejl'
-import {
-  DisposedError,
-  InvalidParameterError,
-  WrongExpectedVersionError,
-} from '../errors/errors'
+import { WrongExpectedVersionError } from '../errors/errors'
 import { noopLogger } from '../logging/noop'
 import { createMetadataCache } from '../infra/metadata-cache'
 import { jsonSerializer } from '../serialization/json'
@@ -791,7 +787,11 @@ export function createPostgresStreamStore(
     }
     notifier =
       notifierConfig.type === 'pg-notify'
-        ? createPostgresNotifier(pool, logger, notifierConfig.keepAliveInterval)
+        ? createPostgresNotifier(
+            config.pg,
+            logger,
+            notifierConfig.keepAliveInterval
+          )
         : createPollingNotifier(
             notifierConfig.pollingInterval || 500,
             store.readHeadPosition,

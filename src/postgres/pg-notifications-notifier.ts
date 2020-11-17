@@ -1,13 +1,15 @@
 import { StreamStoreNotifier } from '../types/subscriptions'
 import { DisposedError } from '../errors/errors'
-import { Pool, PoolClient } from 'pg'
+import { Client } from 'pg'
 import { Logger } from '../types/logger'
+import { DatabaseConnectionOptions } from './types/config'
+import { createPostgresClientConfig } from './connection'
 
 /**
  * Creates a Postgres Notifications notifier.
  */
 export function createPostgresNotifier(
-  pool: Pool,
+  pgConfig: DatabaseConnectionOptions,
   logger: Logger,
   keepAliveInterval?: number
 ): StreamStoreNotifier {
@@ -46,9 +48,10 @@ export function createPostgresNotifier(
   function subscribe() {
     let interval: NodeJS.Timeout | null = null
     let intervalPromise: any = null
-    const clientPromise = pool
+    const client = createClient()
+    const clientPromise = client
       .connect()
-      .then(async (client) => {
+      .then(async () => {
         client.addListener('notification', invokeListeners)
         await client.query('LISTEN new_messages')
         logger.trace('pg-notifications-notifier: listener configured')
@@ -83,7 +86,7 @@ export function createPostgresNotifier(
       }
       return clientPromise.then((c) => {
         c.removeListener('notification', invokeListeners)
-        return c.release()
+        return c.end()
       })
     }
   }
@@ -95,5 +98,12 @@ export function createPostgresNotifier(
     for (const i in _listeners) {
       _listeners[i]()
     }
+  }
+
+  /**
+   * Creates a Postgres client.
+   */
+  function createClient() {
+    return new Client(createPostgresClientConfig(pgConfig))
   }
 }

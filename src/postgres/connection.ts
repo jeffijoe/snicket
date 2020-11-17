@@ -1,4 +1,4 @@
-import { Pool, PoolClient, PoolConfig } from 'pg'
+import { ClientConfig, Pool, PoolClient, PoolConfig } from 'pg'
 import { DatabaseConnectionOptions } from './types/config'
 
 // Create type overrides for JSON so we get them out as strings.
@@ -13,7 +13,19 @@ typeOverrides.setTypeParser(3807, identity)
 /**
  * Creates a Postgres connection pool.
  */
-export function createPostgresPool({
+export function createPostgresPool(opts: DatabaseConnectionOptions) {
+  return new Pool({
+    ...createPostgresClientConfig(opts),
+    min: opts.min || 0,
+    idleTimeoutMillis: 2 * 60 * 1000,
+    max: opts.max || 10,
+  })
+}
+
+/**
+ * Creates a Postgres client connection configuration object.
+ */
+export function createPostgresClientConfig({
   host,
   port,
   ssl,
@@ -22,19 +34,16 @@ export function createPostgresPool({
   database,
   min,
   max,
-}: DatabaseConnectionOptions) {
-  return new Pool({
+}: DatabaseConnectionOptions): ClientConfig {
+  return {
     password,
     database,
     host,
     ssl,
     user,
     types: typeOverrides,
-    min: min || 0,
     port: port as any,
-    idleTimeoutMillis: 2 * 60 * 1000,
-    max: max || 10,
-  } as PoolConfig)
+  } as ClientConfig
 }
 
 /**
