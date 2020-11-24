@@ -36,7 +36,7 @@ export function waitForStreamSubscription(
       streamId,
       async (msg) => {
         if (match(msg)) {
-          sub.dispose().then(() => resolve(), reject)
+          sub.dispose().then(resolve, reject)
         }
       },
       {
@@ -61,7 +61,7 @@ export function waitForAllSubscription(
     const sub = await store.subscribeToAll(
       async (msg) => {
         if (match(msg)) {
-          sub.dispose().then(() => resolve(), reject)
+          sub.dispose().then(resolve, reject)
         }
       },
       {
