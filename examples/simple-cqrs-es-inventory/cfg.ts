@@ -2,7 +2,7 @@ import { PgStreamStoreConfig } from 'snicket/lib/postgres'
 import { createConsoleLogger } from 'snicket'
 
 export const streamStoreConfig: PgStreamStoreConfig = {
-  logger: createConsoleLogger('info'),
+  logger: createConsoleLogger('trace'),
   // Use the Postgres notification system for the subscription.
   // This is faster than the polling notifier.
   notifier: {
