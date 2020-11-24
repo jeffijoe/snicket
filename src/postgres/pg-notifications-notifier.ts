@@ -4,6 +4,7 @@ import { Client } from 'pg'
 import { Logger } from '../types/logger'
 import { DatabaseConnectionOptions } from './types/config'
 import { createPostgresClientConfig } from './connection'
+import { Guardian } from '../utils/guardian'
 
 /**
  * Creates a Postgres Notifications notifier.
@@ -13,7 +14,7 @@ export function createPostgresNotifier(
   logger: Logger,
   keepAliveInterval?: number
 ): StreamStoreNotifier {
-  let _listeners: Array<Function> = []
+  let _listeners: Array<() => void> = []
   let _disposed = false
   let disposeSubscription: (() => Promise<void>) | null = null
   return {
@@ -46,49 +47,45 @@ export function createPostgresNotifier(
    * Subscribes to the notifications feed.
    */
   function subscribe() {
-    let interval: NodeJS.Timeout | null = null
-    let intervalPromise: any = null
-    const client = createClient()
-    const clientPromise = client
-      .connect()
-      .then(async () => {
-        client.addListener('notification', invokeListeners)
-        await client.query('LISTEN new_messages')
-        logger.trace('pg-notifications-notifier: listener configured')
-        if (keepAliveInterval) {
-          interval = setInterval(() => {
-            intervalPromise = client
-              .query('select true')
-              .catch(
-                logger.warn.bind(
-                  logger,
-                  'pg-notifications-notifier: error while running keep-alive query'
-                )
-              )
-          }, keepAliveInterval)
+    const guardian = Guardian({
+      logger,
+      maxRestarts: 10,
+      spawn: (controller) => {
+        let client: Client | null = null
+        let interval: NodeJS.Timeout | null = null
+        let intervalPromise: Promise<unknown> = Promise.resolve()
+        return {
+          name: 'pg-notifications-notifier',
+          async startup() {
+            const inner = (client = createClient())
+            client.addListener('error', controller.onError)
+            client.addListener('notification', invokeListeners)
+            await client.connect()
+            await client.query('LISTEN new_messages')
+            logger.trace('pg-notifications-notifier: listener configured')
+            controller.resetRestartCount()
+            if (keepAliveInterval) {
+              interval = setInterval(() => {
+                intervalPromise = inner
+                  .query('select true')
+                  .then(controller.resetRestartCount)
+                  .catch(controller.onError)
+              }, keepAliveInterval)
+            }
+          },
+          async shutdown() {
+            if (interval !== null) {
+              clearInterval(interval)
+            }
+            await intervalPromise
+            await (client && client.end())
+          },
         }
-        return client
-      })
-      .catch(
-        /* istanbul ignore next */ (err) => {
-          logger.error(
-            'pg-notifications-notifier: error while configuring listener',
-            err
-          )
-          throw err
-        }
-      )
+      },
+    })
 
-    return async () => {
-      if (interval) {
-        clearInterval(interval)
-        await intervalPromise
-      }
-      return clientPromise.then((c) => {
-        c.removeListener('notification', invokeListeners)
-        return c.end()
-      })
-    }
+    guardian.start()
+    return () => guardian.dispose()
   }
 
   /**
@@ -104,6 +101,9 @@ export function createPostgresNotifier(
    * Creates a Postgres client.
    */
   function createClient() {
-    return new Client(createPostgresClientConfig(pgConfig))
+    return new Client({
+      ...createPostgresClientConfig(pgConfig),
+      keepAlive: true,
+    })
   }
 }
