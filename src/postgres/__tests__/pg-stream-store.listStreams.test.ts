@@ -1,4 +1,3 @@
-import _ from 'lodash'
 import { createPostgresStreamStoreBootstrapper } from '../setup/bootstrapper'
 import { streamStoreCfg } from '../../__helpers__/pg-stream-store-config'
 import { createPostgresStreamStore } from '../pg-stream-store'

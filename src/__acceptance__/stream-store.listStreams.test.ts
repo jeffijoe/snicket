@@ -1,7 +1,7 @@
 import { StreamStore, ExpectedVersion } from '..'
-import _ from 'lodash'
 import { generateMessages } from '../__helpers__/message-helper'
 import { v4 } from 'uuid'
+import { range } from '../utils/array-util'
 
 export function listStreamsTestsFor(
   getStore: () => Promise<StreamStore>,
@@ -19,7 +19,7 @@ export function listStreamsTestsFor(
     expect(empty.streamIds).toHaveLength(0)
 
     await Promise.all(
-      _.range(20).map(() =>
+      range(20).map(() =>
         store.appendToStream(v4(), ExpectedVersion.Empty, generateMessages(5))
       )
     )

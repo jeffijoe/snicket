@@ -6,9 +6,9 @@ import {
 import { v4, v5 } from 'uuid'
 import { InvalidParameterError, WrongExpectedVersionError } from '..'
 import { createResetEvent } from '../utils/reset-event'
-import _ from 'lodash'
 import { throws } from 'smid'
 import { generateMessages } from '../__helpers__/message-helper'
+import { range } from '../utils/array-util'
 
 jest.setTimeout(6000000)
 
@@ -116,7 +116,7 @@ export function appendTestFor(
       const succeeded = createResetEvent()
       await expect(
         Promise.all(
-          _.range(20).map(() =>
+          range(20).map(() =>
             store
               .appendToStream(
                 streamId,
@@ -156,7 +156,7 @@ export function appendTestFor(
     test('can append with ExpectedVersion.Any and same stream ID in parallel without fail', async () => {
       const streamId = v4()
       await Promise.all(
-        _.range(50).map(() =>
+        range(50).map(() =>
           store.appendToStream(
             streamId,
             ExpectedVersion.Any,
@@ -168,7 +168,7 @@ export function appendTestFor(
 
     test('can append with ExpectedVersion.Any in parallel without fail', async () => {
       await Promise.all(
-        _.range(50).map(() =>
+        range(50).map(() =>
           store.appendToStream(v4(), ExpectedVersion.Any, generateMessages(10))
         )
       )

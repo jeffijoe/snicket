@@ -1,15 +1,15 @@
 import { createStreamSubscription } from '../stream-subscription'
 import { v4 } from 'uuid'
-import _ from 'lodash'
 import { SubscribeAt } from '../../types/subscriptions'
 import { StreamStore, ReadStreamResult } from '../../types/stream-store'
 import { createPollingNotifier } from '../polling-notifier'
 import { delay } from '../../utils/promise-util'
 import { StreamMessage } from '../../types/messages'
 import { noopLogger } from '../../logging/noop'
+import { range } from '../../utils/array-util'
 
 const streamId = v4()
-const messages: StreamMessage[] = _.range(1, 11).map<StreamMessage>((i) => ({
+const messages: StreamMessage[] = range(1, 11).map<StreamMessage>((i) => ({
   messageId: v4(),
   data: { i },
   causationId: v4(),
@@ -48,7 +48,9 @@ beforeEach(() => {
     deleteStream: null as any,
     subscribeToAll: null as any,
   }
-  readHeadPositionMock.mockReturnValue(_.last(messages)!.position.toString())
+  readHeadPositionMock.mockReturnValue(
+    messages[messages.length - 1].position.toString()
+  )
   readStreamMock
     .mockReturnValueOnce({
       streamId,
