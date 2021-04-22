@@ -4,20 +4,22 @@ import { Logger } from '../types/logger'
 import BigInteger from 'big-integer'
 import { DisposedError } from '../errors/errors'
 import { delay } from '../utils/promise-util'
+import { PollingNotifierConfig } from '../postgres'
 
 /**
  * A Polling Notifier will poll the head for changes and signal whenever there's
  * changes to pull.
  *
- * @param interval the interval to check for new messages
  * @param readHeadPosition a function to read the head position
  * @param logger used for logging trace-level stuff as well as errors
+ * @param notifierConfig the configuration for the notifier
  */
 export function createPollingNotifier(
-  interval: number,
   readHeadPosition: StreamStore['readHeadPosition'],
-  logger: Logger
+  logger: Logger,
+  notifierConfig: PollingNotifierConfig
 ): StreamStoreNotifier {
+  const interval = notifierConfig.pollingInterval || 500
   let _listeners: Array<Function> = []
   let _disposed = false
 

@@ -1,6 +1,5 @@
 import { StreamStore, ExpectedVersion, DisposedError } from '..'
 import { v4 } from 'uuid'
-import { noop } from 'lodash'
 import { delay } from '../utils/promise-util'
 import { createResetEvent } from '../utils/reset-event'
 
@@ -122,4 +121,12 @@ export function disposeTestsFor(
       await store.dispose().catch(Boolean)
     }
   })
+}
+
+/**
+ * No-op.
+ */
+/* istanbul ignore next */
+function noop() {
+  /**/
 }

@@ -40,3 +40,23 @@ export function groupBy<T, K extends keyof T>(
 
   return Array.from(map.entries())
 }
+
+/**
+ * Generates a range of numbers from start (inclusive) to end (exclusive).
+ * If only a single argument is specified, it becomes `end` and `start` becomes 0.
+ *
+ * @param start
+ * @param end
+ */
+export function range(start: number, end?: number): number[] {
+  if (end === undefined) {
+    end = start
+    start = 0
+  }
+
+  const result: number[] = []
+  for (let i = start; i < end; i++) {
+    result.push(i)
+  }
+  return result
+}

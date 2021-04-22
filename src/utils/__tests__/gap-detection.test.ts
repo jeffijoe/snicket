@@ -1,8 +1,8 @@
 import { detectGapsAndReloadAll } from '../gap-detection'
-import _ from 'lodash'
 import { noopLogger } from '../../logging/noop'
 import { ReadAllResult } from '../../types/stream-store'
 import { StreamMessage } from '../../types/messages'
+import { range } from '../array-util'
 
 test('detects gaps between messages', async () => {
   const logger = {
@@ -12,7 +12,7 @@ test('detects gaps between messages', async () => {
   const messagesWithGap = {
     isEnd: true,
     nextPosition: '20',
-    messages: _.range(10, 19).map(
+    messages: range(10, 19).map(
       (i) =>
         ({
           // Add a message gap
@@ -27,7 +27,7 @@ test('detects gaps between messages', async () => {
     .mockResolvedValueOnce({
       isEnd: true,
       nextPosition: '20',
-      messages: _.range(10, 20).map(
+      messages: range(10, 20).map(
         (i) =>
           ({
             // Add a message gap
@@ -58,7 +58,7 @@ test('detects gaps between pages', async () => {
   const pageWithGap = {
     isEnd: true,
     nextPosition: '20',
-    messages: _.range(11, 20).map(
+    messages: range(11, 20).map(
       (i) =>
         ({
           position: i.toString(),
@@ -72,7 +72,7 @@ test('detects gaps between pages', async () => {
     .mockResolvedValueOnce({
       isEnd: true,
       nextPosition: '20',
-      messages: _.range(10, 20).map(
+      messages: range(10, 20).map(
         (i) =>
           ({
             // Add a message gap

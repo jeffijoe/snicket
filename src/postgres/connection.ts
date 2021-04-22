@@ -16,8 +16,8 @@ typeOverrides.setTypeParser(3807, identity)
 export function createPostgresPool(opts: DatabaseConnectionOptions) {
   return new Pool({
     ...createPostgresClientConfig(opts),
-    min: opts.min || 0,
-    idleTimeoutMillis: 2 * 60 * 1000,
+    min: opts.min || 1,
+    idleTimeoutMillis: opts.idleTimeoutMillis || 30 * 1000,
     max: opts.max || 10,
   })
 }
@@ -41,8 +41,8 @@ export function createPostgresClientConfig({
     host,
     ssl,
     user,
+    port,
     types: typeOverrides,
-    port: port as any,
   } as ClientConfig
 }
 

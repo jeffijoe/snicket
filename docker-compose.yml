@@ -5,8 +5,9 @@ networks:
 services:
   postgres:
     image: postgres:9.6
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
     networks:
       - stream-store
     ports:
       - '20091:5432'
-  

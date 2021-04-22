@@ -7,9 +7,9 @@ import { toMetadataStreamId } from '../id-util'
 test('filters expired messages and reports them', async () => {
   const now = new Date()
   const streamId = 'stream'
-  const allMessages: Array<StreamMessage> = generateMessages(10).map<
-    StreamMessage
-  >((msg, i) => ({
+  const allMessages: Array<StreamMessage> = generateMessages(
+    10
+  ).map<StreamMessage>((msg, i) => ({
     ...msg,
     streamId,
     createdAt: new Date(now.getTime() - (10 - i) * 60000),
@@ -32,9 +32,9 @@ test('filters expired messages and reports them', async () => {
 test('skips meta messages', async () => {
   const now = new Date()
   const streamId = toMetadataStreamId('stream')
-  const allMessages: Array<StreamMessage> = generateMessages(10).map<
-    StreamMessage
-  >((msg, i) => ({
+  const allMessages: Array<StreamMessage> = generateMessages(
+    10
+  ).map<StreamMessage>((msg, i) => ({
     ...msg,
     streamId,
     createdAt: new Date(now.getTime() - (10 - i) * 60000),
@@ -57,9 +57,9 @@ test('skips meta messages', async () => {
 test('skips messages with no max count item', async () => {
   const now = new Date()
   const streamId = 'stream'
-  const allMessages: Array<StreamMessage> = generateMessages(10).map<
-    StreamMessage
-  >((msg, i) => ({
+  const allMessages: Array<StreamMessage> = generateMessages(
+    10
+  ).map<StreamMessage>((msg, i) => ({
     ...msg,
     streamId,
     createdAt: new Date(now.getTime() - (10 - i) * 60000),

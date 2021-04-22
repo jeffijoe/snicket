@@ -787,16 +787,8 @@ export function createPostgresStreamStore(
     }
     notifier =
       notifierConfig.type === 'pg-notify'
-        ? createPostgresNotifier(
-            config.pg,
-            logger,
-            notifierConfig.keepAliveInterval
-          )
-        : createPollingNotifier(
-            notifierConfig.pollingInterval || 500,
-            store.readHeadPosition,
-            logger
-          )
+        ? createPostgresNotifier(config.pg, logger, notifierConfig)
+        : createPollingNotifier(store.readHeadPosition, logger, notifierConfig)
     logger.trace(`pg-stream-store: initialized ${notifierConfig.type} notifier`)
     return notifier
   }
