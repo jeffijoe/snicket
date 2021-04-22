@@ -126,6 +126,7 @@ export function disposeTestsFor(
 /**
  * No-op.
  */
+/* istanbul ignore next */
 function noop() {
   /**/
 }

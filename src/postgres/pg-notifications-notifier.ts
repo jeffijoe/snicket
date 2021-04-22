@@ -2,7 +2,7 @@ import { StreamStoreNotifier } from '../types/subscriptions'
 import { DisposedError } from '../errors/errors'
 import { Client } from 'pg'
 import { Logger } from '../types/logger'
-import { DatabaseConnectionOptions } from './types/config'
+import { DatabaseConnectionOptions, PgNotifierConfig } from './types/config'
 import { createPostgresClientConfig } from './connection'
 import { Guardian } from '../utils/guardian'
 
@@ -12,11 +12,12 @@ import { Guardian } from '../utils/guardian'
 export function createPostgresNotifier(
   pgConfig: DatabaseConnectionOptions,
   logger: Logger,
-  keepAliveInterval?: number
+  config: PgNotifierConfig
 ): StreamStoreNotifier {
   let _listeners: Array<() => void> = []
   let _disposed = false
   let disposeSubscription: (() => Promise<void>) | null = null
+  const keepAliveInterval = config.keepAliveInterval
   return {
     listen(cb) {
       DisposedError.assert(!_disposed, 'The notifier has been disposed.')
@@ -102,7 +103,14 @@ export function createPostgresNotifier(
    */
   function createClient() {
     return new Client({
-      ...createPostgresClientConfig(pgConfig),
+      ...createPostgresClientConfig({
+        ...pgConfig,
+        // Use the configuration overrides if present.
+        host: config.host || pgConfig.host,
+        port: config.port || pgConfig.port,
+        user: config.user || pgConfig.user,
+        password: config.password || pgConfig.password,
+      }),
       keepAlive: true,
     })
   }

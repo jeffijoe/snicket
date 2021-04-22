@@ -89,7 +89,10 @@ beforeEach(() => {
 
 test('basic', async () => {
   const processMessageMock = jest.fn()
-  const notifier = createPollingNotifier(10, readHeadPositionMock, noopLogger)
+  const notifier = createPollingNotifier(readHeadPositionMock, noopLogger, {
+    type: 'poll',
+    pollingInterval: 10,
+  })
   const established = jest.fn()
   const subscription = createStreamSubscription(
     streamId,

@@ -14,30 +14,35 @@ Useful for Event Sourcing.
 
 # Table of Contents
 
-   * [Snicket](#snicket)
-   * [Installing](#installing)
-   * [Setting it up](#setting-it-up)
-   * [Quick Start](#quick-start)
-   * [Concepts](#concepts)
-   * [Appending](#appending)
-   * [Reading](#reading)
-      * [Filtering Expired Messages](#filtering-expired-messages)
-      * [Listing Streams](#listing-streams)
-   * [Stream Metadata](#stream-metadata)
-   * [Scavenging](#scavenging)
-   * [Subscriptions](#subscriptions)
-      * [Subscribing to a stream](#subscribing-to-a-stream)
-      * [Subscribing to the all-stream](#subscribing-to-the-all-stream)
-      * [Notifiers](#notifiers)
-   * [Idempotency](#idempotency)
-      * [Idempotency for ExpectedVersion.Any](#idempotency-for-expectedversionany)
-      * [Idempotency when specifying an explicit version](#idempotency-when-specifying-an-explicit-version)
-   * [Gap Detection](#gap-detection)
-   * [Serialization](#serialization)
-   * [Logging](#logging)
-   * [In-Memory Stream Store](#in-memory-stream-store)
-   * [About](#about)
-
+- [Snicket](#snicket)
+- [Table of Contents](#table-of-contents)
+- [Installing](#installing)
+- [Setting it up](#setting-it-up)
+- [Quick Start](#quick-start)
+- [Concepts](#concepts)
+- [Appending](#appending)
+- [Reading](#reading)
+  - [Filtering Expired Messages](#filtering-expired-messages)
+  - [Listing Streams](#listing-streams)
+- [Stream Metadata](#stream-metadata)
+- [Scavenging](#scavenging)
+- [Subscriptions](#subscriptions)
+  - [Subscribing to a stream](#subscribing-to-a-stream)
+  - [Subscribing to the all-stream](#subscribing-to-the-all-stream)
+  - [Notifiers](#notifiers)
+- [Idempotency](#idempotency)
+  - [Idempotency for `ExpectedVersion.Any`](#idempotency-for-expectedversionany)
+  - [Idempotency when specifying an explicit version](#idempotency-when-specifying-an-explicit-version)
+- [Gap Detection](#gap-detection)
+- [Serialization](#serialization)
+- [Postgres Performance](#postgres-performance)
+  - [Use a connection pooler (PgBouncer, pg-pool, etc)](#use-a-connection-pooler-pgbouncer-pg-pool-etc)
+    - [Gotcha: `pg-notify` notifier](#gotcha-pg-notify-notifier)
+  - [Use read-write split](#use-read-write-split)
+    - [Gotcha: DO NOT use `pg-notify` notifier](#gotcha-do-not-use-pg-notify-notifier)
+- [Logging](#logging)
+- [In-Memory Stream Store](#in-memory-stream-store)
+- [About](#about)
 
 # Installing
 
@@ -575,6 +580,58 @@ const store = createPostgresStreamStore({
 ```
 
 You can also plug in any other serialization format that will result in a string.
+
+# Postgres Performance
+
+There are a few things you can do on the Postgres side with minimal configuration changes to Snicket to improve performance.
+
+## Use a connection pooler (PgBouncer, pg-pool, etc)
+
+Snicket itself uses the built-in `pg-pool` and exposes the following pooling-related options on the `pg` configuration object:
+
+- `min`: the minimum amount of connections to keep in the pool.
+- `max`: the maximum amount of connections to keep in the pool.
+- `idleTimeoutMillis`: if a connection is idle, close it completely after this amount of time.
+
+Even so, when scaling out your application, you will likely run into server-side connection starvation.
+
+When running Postgres at scale, it is not uncommon to use a connection pooler such as [PgBouncer](http://pgbouncer.org) since Postgres
+itself does not do well with a ton of open connections. When using PgBouncer, you will be able to increase the `min` and `max` connections
+rather generously.
+
+### Gotcha: `pg-notify` notifier
+
+Snicket supports using Postgres' native `LISTEN/NOTIFY`, but `LISTEN` does not work when using **transaction pooling**. That is why the notifier configuration
+allows to specify connection overrides so you can use either a direct connection to Postgres, and/or another user/password combination in order to target a 
+session-pooled configuration.
+
+```ts
+createPostgresStreamStore({
+  notifier: {
+    type: 'pg-notify',
+    host: 'real-postgres-or-whatever', // optional
+    port: 6543, // optional
+    user: 'session-pooled-user-or-whatever',
+    password: 'P@ssw0rd', // optional
+  }
+})
+```
+
+## Use read-write split
+
+It's kind of funny how CQRS can be applied to the infrastructure that itself supports building CQRS + Event-sourced applications. 🤓
+
+If you configure a Postgres standby server with asynchronous streaming replication, you will get an **eventually-consistent read replica** that you can use 
+to read from. So it makes perfect sense to create a 2nd stream store instance that points to a read replica, and use that for read-intensive areas such as subscriptions
+or just reading in general. This takes load off the primary as well.
+
+### Gotcha: DO NOT use `pg-notify` notifier
+
+The `pg-notify` notifier is not compatible with using a read replica because Postgres read replicas do not support it.
+Even if they did, there is no guarantee that the replica has replicated the written messages by the time we get the notification,
+so you should not attempt to configure the notifier to use the primary if you are going to use the read replica for subscriptions.
+
+Instead, since the read-replica is taking load off the primary, you can use a relatively low polling interval like `100` milliseconds (adjust to taste).
 
 # Logging
 

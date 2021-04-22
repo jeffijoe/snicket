@@ -13,7 +13,10 @@ test('notifies correctly', async () => {
     .mockReturnValueOnce(Promise.resolve('2'))
     .mockReturnValue(Promise.resolve('3'))
 
-  const notifier = createPollingNotifier(10, readHeadPosition, noopLogger)
+  const notifier = createPollingNotifier(readHeadPosition, noopLogger, {
+    type: 'poll',
+    pollingInterval: 10,
+  })
   const cb1 = jest.fn()
   const cb2 = jest.fn()
   const dispose = notifier.listen(cb1)

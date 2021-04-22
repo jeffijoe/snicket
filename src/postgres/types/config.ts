@@ -66,6 +66,29 @@ export interface PgNotifierConfig {
    * Value is milliseconds. Recommended: 5 * 60 * 1000 (5 minutes)
    */
   keepAliveInterval?: number
+  /**
+   * Optional override to connect to a different host for receiving notifications.
+   * Useful when using PgBouncer primarily and you want to connect straight to the
+   * source in order to take advantage of `pg_notify`.
+   */
+  host?: string
+  /**
+   * Optional override to connect to a different port for receiving notifications.
+   * Useful when using PgBouncer primarily and you want to connect straight to the
+   * source in order to take advantage of `pg_notify`.
+   */
+  port?: string | number
+  /**
+   * Optional override to connect as a different user for receiving notifications.
+   * Useful when using PgBouncer and you want to use a session-pool configuration
+   * to take advantage of `pg_notify`. That way, you can use transaction pooling for
+   * everything else.
+   */
+  user?: string
+  /**
+   * Optional override for the password.
+   */
+  password?: string
 }
 
 /**
@@ -106,10 +129,10 @@ export interface DatabaseConnectionOptions {
   dropIfTest?: boolean
   host: string
   port: string | number
+  ssl?: boolean
   user: string
   password: string
   database: string
-  ssl?: boolean
   /**
    * Pool minimum size.
    */
@@ -118,4 +141,8 @@ export interface DatabaseConnectionOptions {
    * Pool maximum size.
    */
   max?: number
+  /**
+   * Idle timeout (in milliseconds).
+   */
+  idleTimeoutMillis?: number
 }
