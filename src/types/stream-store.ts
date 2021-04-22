@@ -14,9 +14,9 @@ import {
 } from './subscriptions'
 
 /**
- * Stream Store interface.
+ * Stream store reader interface.
  */
-export interface StreamStore {
+export interface StreamStoreReader {
   /**
    * Read the head position (the newest message's position).
    */
@@ -65,32 +65,6 @@ export interface StreamStore {
   readStreamMetadata(streamId: string): Promise<StreamMetadataResult>
 
   /**
-   * Sets the stream's metadata.
-   * @param streamId
-   */
-  setStreamMetadata(
-    streamId: string,
-    expectedVersion: StreamVersion | ExpectedVersion,
-    payload: SetStreamMetadataOptions
-  ): Promise<SetStreamMetadataResult>
-
-  /**
-   * Appends messages to a stream. Creates it if it does not already exist.
-   *
-   * @param streamId
-   * @param expectedVersion
-   * @param newMessages
-   * @throws {DuplicateMessageError}
-   * @throws {WrongExpectedVersionError}
-   * @throws {InconsistentStreamError}
-   */
-  appendToStream(
-    streamId: string,
-    expectedVersion: StreamVersion | ExpectedVersion,
-    newMessages: NewStreamMessage[]
-  ): Promise<AppendToStreamResult>
-
-  /**
    * Subscribes to a stream.
    * If no `subscriptionOptions.afterVersion` is specified,
    * starts subscribing at the head of the stream.
@@ -119,6 +93,43 @@ export interface StreamStore {
   ): Promise<AllSubscription>
 
   /**
+   * Disposes of the underlying store connection.
+   * Returns a `Promise` when done.
+   */
+  dispose(): Promise<void>
+}
+
+/**
+ * Stream Store interface.
+ */
+export interface StreamStore extends StreamStoreReader {
+  /**
+   * Sets the stream's metadata.
+   * @param streamId
+   */
+  setStreamMetadata(
+    streamId: string,
+    expectedVersion: StreamVersion | ExpectedVersion,
+    payload: SetStreamMetadataOptions
+  ): Promise<SetStreamMetadataResult>
+
+  /**
+   * Appends messages to a stream. Creates it if it does not already exist.
+   *
+   * @param streamId
+   * @param expectedVersion
+   * @param newMessages
+   * @throws {DuplicateMessageError}
+   * @throws {WrongExpectedVersionError}
+   * @throws {InconsistentStreamError}
+   */
+  appendToStream(
+    streamId: string,
+    expectedVersion: StreamVersion | ExpectedVersion,
+    newMessages: NewStreamMessage[]
+  ): Promise<AppendToStreamResult>
+
+  /**
    * Deletes a stream and all of it's messages.
    */
   deleteStream(
@@ -131,12 +142,6 @@ export interface StreamStore {
    * You better have a good reason for using this.
    */
   deleteMessage(streamId: string, messageId: string): Promise<void>
-
-  /**
-   * Disposes of the underlying store connection.
-   * Returns a `Promise` when done.
-   */
-  dispose(): Promise<void>
 }
 
 /**
