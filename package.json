@@ -52,7 +52,7 @@
     "pg": "^8.6.0",
     "prettier": "^2.2.1",
     "rimraf": "^3.0.2",
-    "semantic-release": "^17.4.2",
+    "semantic-release": "^19.0.3",
     "smid": "^0.1.1",
     "ts-jest": "^26.5.5",
     "ts-node": "^9.1.1",
